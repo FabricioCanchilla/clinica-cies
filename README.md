@@ -107,12 +107,15 @@ git push -u origin feature/nombre-de-la-tarea
 | `Check constraint ... violated` al sembrar | El SQL se guardó mal; revisa que esté en UTF-8 y recrea la BD con `down -v` |
 | Error de conexión al sembrar | Revisa que `.env` tenga `DB_PORT=3307` y `DB_PASSWORD=root123`, y corre `php artisan config:clear` |
 
+```text
  /\_/\
-( o.o )  🚬  VAMOS KRAJO 
+( o.o )  ~~~  VAMOS KRAJO
  > ^ <
- 
+```
+```text
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ░░░░█▀▀▀░█▀▀▀░░█▀▀░▀▀█░░█░░░░
 ░░░░█░▀█░█░▀█░░█▀▀░▄▀░░░▀░░░░
 ░░░░▀▀▀▀░▀▀▀▀░░▀▀▀░▀▀▀░░▀░░░░
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+```
