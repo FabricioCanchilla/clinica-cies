@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
-
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -41,5 +41,39 @@ class UsuarioController extends Controller
             ->get();
 
         return view('admin.usuarios.index', compact('usuarios', 'buscar'));
+    }
+        public function cambiarEstado(Request $request, string $codUsr)
+    {
+        $request->validate([
+            'accion' => 'required|in:bloquear,desbloquear',
+        ]);
+
+        $usuario = DB::table('USUARIO')->where('COD_USR', $codUsr)->first();
+        abort_if(!$usuario, 404);
+
+        // Un admin no puede bloquearse a sí mismo
+        if ($usuario->COD_USR === Auth::user()->COD_USR) {
+            return back()->withErrors(['usuario' => 'No puedes cambiar el estado de tu propia cuenta.']);
+        }
+
+        if ($request->accion === 'bloquear') {
+            if ($usuario->EST_USR !== 'Activo') {
+                return back()->withErrors(['usuario' => 'Solo se puede bloquear una cuenta activa.']);
+            }
+            DB::table('USUARIO')->where('COD_USR', $codUsr)->update([
+                'EST_USR' => 'Bloqueado',
+            ]);
+            return back()->with('ok', "Usuario {$usuario->USR_USR} bloqueado.");
+        }
+
+        // desbloquear
+        if ($usuario->EST_USR !== 'Bloqueado') {
+            return back()->withErrors(['usuario' => 'Solo se puede desbloquear una cuenta bloqueada.']);
+        }
+        DB::table('USUARIO')->where('COD_USR', $codUsr)->update([
+            'EST_USR'    => 'Activo',
+            'INTFAL_USR' => 0, // si no, la primera clave mala ya sumaría 4 intentos
+        ]);
+        return back()->with('ok', "Usuario {$usuario->USR_USR} desbloqueado.");
     }
 }

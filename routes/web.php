@@ -44,6 +44,8 @@ Route::middleware('auth')->group(function () {
         })->name('dashboard');
 
         Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios');
+         Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios');
+        Route::post('/usuarios/{codUsr}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.estado');
 
         $secciones = [
             'pacientes'   => 'Pacientes',

@@ -35,9 +35,29 @@
                         <td><span class="badge {{ strtolower($u->EST_USR) }}">{{ $u->EST_USR }}</span></td>
                         <td>{{ $u->INTFAL_USR }}</td>
                         <td>{{ $u->FECULT_USR ? \Carbon\Carbon::parse($u->FECULT_USR)->format('d/m/Y H:i') : 'Nunca' }}</td>
+                                                <td>
+                            @if ($u->COD_USR === auth()->user()->COD_USR)
+                                <span style="color: var(--texto-suave, #888);">Tu cuenta</span>
+                            @elseif ($u->EST_USR === 'Activo')
+                                <form method="POST" action="{{ route('admin.usuarios.estado', $u->COD_USR) }}"
+                                      onsubmit="return confirm('¿Bloquear a {{ $u->USR_USR }}?')">
+                                    @csrf
+                                    <input type="hidden" name="accion" value="bloquear">
+                                    <button type="submit" class="btn peligro">Bloquear</button>
+                                </form>
+                            @elseif ($u->EST_USR === 'Bloqueado')
+                                <form method="POST" action="{{ route('admin.usuarios.estado', $u->COD_USR) }}">
+                                    @csrf
+                                    <input type="hidden" name="accion" value="desbloquear">
+                                    <button type="submit" class="btn">Desbloquear</button>
+                                </form>
+                            @else
+                                —
+                            @endif
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6">No se encontraron usuarios.</td></tr>
+                    <tr><td colspan="7">No se encontraron usuarios.</td></tr>
                 @endforelse
             </tbody>
         </table>
