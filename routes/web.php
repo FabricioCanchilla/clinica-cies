@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\UsuarioController;
 
 Route::get('/', fn () => redirect()->route('panel'));
 
@@ -42,8 +43,9 @@ Route::middleware('auth')->group(function () {
             return view('admin.dashboard', compact('totales', 'ultimos'));
         })->name('dashboard');
 
+        Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios');
+
         $secciones = [
-            'usuarios'    => 'Usuarios',
             'pacientes'   => 'Pacientes',
             'citas'       => 'Citas',
             'caja'        => 'Caja',
