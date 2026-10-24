@@ -53,6 +53,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/usuarios/{codUsr}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.estado');
 
         Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria');
+                Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios');
+        Route::get('/usuarios/crear', [UsuarioController::class, 'create'])->name('usuarios.crear');
+        Route::post('/usuarios', [UsuarioController::class, 'store'])->name('usuarios.guardar');
+        Route::post('/usuarios/{codUsr}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.estado');
 
         $secciones = [
             'pacientes'   => 'Pacientes',

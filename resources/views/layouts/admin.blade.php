@@ -110,6 +110,15 @@
         .alerta { padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
         .alerta.ok { background: rgba(45,212,191,.12); color: var(--acento); }
         .alerta.error { background: rgba(244,63,94,.12); color: #fda4af; }
+                .formulario { max-width: 520px; }
+        .formulario label { display: block; font-size: 13px; color: #8b98a8; margin-bottom: 6px; }
+        .formulario input, .formulario select {
+            width: 100%; padding: 10px 12px; margin-bottom: 16px;
+            background: var(--panel); border: 1px solid var(--borde);
+            border-radius: 8px; color: var(--texto); font-family: inherit; font-size: 14px;
+        }
+        .formulario input:focus, .formulario select:focus { outline: none; border-color: var(--acento); }
+        .btn.principal { background: var(--acento); color: #06201c; border-color: var(--acento); font-weight: 600; }
         @media (max-width: 800px) {
             aside { position: static; width: 100%; flex-direction: row; overflow-x: auto; }
             body { flex-direction: column; }

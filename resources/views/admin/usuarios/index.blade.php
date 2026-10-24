@@ -5,6 +5,9 @@
 @section('contenido')
     <h1>Usuarios</h1>
     <p class="sub">Cuentas de acceso del personal y de los pacientes.</p>
+        <p style="margin-bottom: 18px;">
+        <a href="{{ route('admin.usuarios.crear') }}" class="btn principal">+ Nuevo usuario</a>
+    </p>
 
     <form method="GET" action="{{ route('admin.usuarios') }}" class="barra">
         <input type="text" name="buscar" value="{{ $buscar }}" placeholder="Buscar por usuario o nombre">

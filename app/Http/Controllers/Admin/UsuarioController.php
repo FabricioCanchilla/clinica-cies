@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\Auditoria;
-
+use Illuminate\Support\Facades\Hash;
 class UsuarioController extends Controller
 {
     public function index(Request $request)
@@ -92,5 +92,82 @@ class UsuarioController extends Controller
         });
 
         return back()->with('ok', "Usuario {$usuario->USR_USR} desbloqueado.");
+    }
+        public function create()
+    {
+        // Solo empleados que todavía no tienen usuario
+        $empleados = DB::table('EMPLEADO')
+            ->leftJoin('USUARIO', 'EMPLEADO.COD_EMP', '=', 'USUARIO.COD_EMP')
+            ->whereNull('USUARIO.COD_EMP')
+            ->select('EMPLEADO.COD_EMP', 'EMPLEADO.NOM_EMP', 'EMPLEADO.APE_EMP', 'EMPLEADO.CI_EMP')
+            ->orderBy('EMPLEADO.APE_EMP')
+            ->get();
+
+        // Paciente (ROL006) no se crea aquí: los pacientes se registran solos
+        $roles = DB::table('ROL')
+            ->where('COD_ROL', '<>', 'ROL006')
+            ->orderBy('COD_ROL')
+            ->get();
+
+        return view('admin.usuarios.crear', compact('empleados', 'roles'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'usuario'  => ['required', 'string', 'min:4', 'max:20', 'regex:/^[A-Za-z0-9._-]+$/', 'unique:USUARIO,USR_USR'],
+            'empleado' => 'required|string|exists:EMPLEADO,COD_EMP',
+            'rol'      => 'required|string|exists:ROL,COD_ROL',
+            'clave'    => 'required|string|min:8|max:72|confirmed',
+        ], [
+            'usuario.required'  => 'Escribe el nombre de usuario.',
+            'usuario.min'       => 'El usuario debe tener al menos 4 caracteres.',
+            'usuario.max'       => 'El usuario puede tener como máximo 20 caracteres.',
+            'usuario.regex'     => 'El usuario solo puede llevar letras, números, punto, guion y guion bajo.',
+            'usuario.unique'    => 'Ese nombre de usuario ya existe.',
+            'empleado.required' => 'Selecciona un empleado.',
+            'empleado.exists'   => 'El empleado seleccionado no existe.',
+            'rol.required'      => 'Selecciona un rol.',
+            'rol.exists'        => 'El rol seleccionado no existe.',
+            'clave.required'    => 'Escribe la contraseña temporal.',
+            'clave.min'         => 'La contraseña temporal debe tener al menos 8 caracteres.',
+            'clave.confirmed'   => 'La confirmación no coincide con la contraseña.',
+        ]);
+
+        // Reglas que no se pueden dejar solo en el formulario
+        if ($request->rol === 'ROL006') {
+            return back()->withErrors(['rol' => 'Los pacientes se registran solos; no se crean desde aquí.'])->withInput();
+        }
+
+        if (DB::table('USUARIO')->where('COD_EMP', $request->empleado)->exists()) {
+            return back()->withErrors(['empleado' => 'Ese empleado ya tiene un usuario.'])->withInput();
+        }
+
+        $rol = DB::table('ROL')->where('COD_ROL', $request->rol)->first();
+
+        DB::transaction(function () use ($request, $rol) {
+            $siguiente = (int) DB::table('USUARIO')
+                ->max(DB::raw('CAST(SUBSTRING(COD_USR, 4) AS UNSIGNED)')) + 1;
+            $codUsr = sprintf('USR%05d', $siguiente);
+
+            DB::table('USUARIO')->insert([
+                'COD_USR'    => $codUsr,
+                'USR_USR'    => $request->usuario,
+                'CON_USR'    => Hash::make($request->clave),
+                'EST_USR'    => 'Activo',
+                'INTFAL_USR' => 0,
+                'CAMCON_USR' => 1, // debe cambiar la contraseña en su primer ingreso
+                'COD_ROL'    => $request->rol,
+                'COD_EMP'    => $request->empleado,
+                'COD_PAC'    => null,
+            ]);
+
+            Auditoria::registrar(
+                'Crear', 'Alta', 'DOM01', 'USUARIO', $codUsr,
+                "Alta del usuario {$request->usuario} con rol {$rol->DES_ROL}"
+            );
+        });
+
+        return redirect()->route('admin.usuarios')->with('ok', "Usuario {$request->usuario} creado. Deberá cambiar su contraseña al ingresar.");
     }
 }
