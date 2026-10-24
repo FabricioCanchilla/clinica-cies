@@ -87,11 +87,18 @@
         .badge { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
         .badge.activo { background: rgba(45,212,191,.15); color: var(--acento); }
         .badge.bloqueado, .badge.inactivo { background: rgba(244,63,94,.15); color: #fda4af; }
-        .barra { display: flex; gap: 10px; margin-bottom: 18px; }
+                        .barra { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+                                .badge.media { background: rgba(251,191,36,.15); color: #fcd34d; }
         .barra input {
             flex: 1; max-width: 340px; padding: 9px 12px;
             background: var(--panel); border: 1px solid var(--borde);
             border-radius: 8px; color: var(--texto); font-family: inherit;
+        }
+        .barra select, .barra input[type=date] {
+            flex: none; max-width: none; padding: 9px 12px;
+            background: var(--panel); border: 1px solid var(--borde);
+            border-radius: 8px; color: var(--texto); font-family: inherit;
+            color-scheme: dark;
         }
         .btn {
             padding: 7px 14px; border-radius: 8px; border: 1px solid var(--borde);

@@ -1,9 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\AuditoriaController;
+use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\Auth\LoginController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\UsuarioController;
 
 Route::get('/', fn () => redirect()->route('panel'));
 
@@ -44,15 +45,15 @@ Route::middleware('auth')->group(function () {
         })->name('dashboard');
 
         Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios');
-         Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios');
         Route::post('/usuarios/{codUsr}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.estado');
+
+        Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria');
 
         $secciones = [
             'pacientes'   => 'Pacientes',
             'citas'       => 'Citas',
             'caja'        => 'Caja',
             'internacion' => 'Internación',
-            'auditoria'   => 'Auditoría',
         ];
 
         foreach ($secciones as $slug => $titulo) {
