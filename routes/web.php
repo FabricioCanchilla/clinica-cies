@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AuditoriaController;
 use App\Http\Controllers\Admin\UsuarioController;
+use App\Http\Controllers\Auth\CambioClaveController;
 use App\Http\Controllers\Auth\LoginController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,10 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+    // Cambio de contraseña (obligatorio en el primer ingreso)
+    Route::get('/cambiar-clave', [CambioClaveController::class, 'form'])->name('clave.cambiar');
+    Route::post('/cambiar-clave', [CambioClaveController::class, 'actualizar'])->name('clave.actualizar');
 
     // Redirige a cada usuario al panel de su rol
     Route::get('/panel', function () {
