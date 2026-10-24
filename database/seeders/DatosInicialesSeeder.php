@@ -54,5 +54,9 @@ class DatosInicialesSeeder extends Seeder
             'COD_EMP'    => 'EMP000001',
             'COD_PAC'    => null,
         ]);
+                // 5. Dominios de auditoría
+        DB::table('DOMINIO_AUD')->insertOrIgnore([
+            ['COD_DOM' => 'DOM01', 'DES_DOM' => 'Usuarios y accesos'],
+        ]);
     }
 }

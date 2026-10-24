@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Services\Auditoria;
 
 class UsuarioController extends Controller
 {
@@ -42,7 +43,7 @@ class UsuarioController extends Controller
 
         return view('admin.usuarios.index', compact('usuarios', 'buscar'));
     }
-        public function cambiarEstado(Request $request, string $codUsr)
+            public function cambiarEstado(Request $request, string $codUsr)
     {
         $request->validate([
             'accion' => 'required|in:bloquear,desbloquear',
@@ -60,9 +61,17 @@ class UsuarioController extends Controller
             if ($usuario->EST_USR !== 'Activo') {
                 return back()->withErrors(['usuario' => 'Solo se puede bloquear una cuenta activa.']);
             }
-            DB::table('USUARIO')->where('COD_USR', $codUsr)->update([
-                'EST_USR' => 'Bloqueado',
-            ]);
+
+            DB::transaction(function () use ($codUsr, $usuario) {
+                DB::table('USUARIO')->where('COD_USR', $codUsr)->update([
+                    'EST_USR' => 'Bloqueado',
+                ]);
+                Auditoria::registrar(
+                    'Actualizar', 'Alta', 'DOM01', 'USUARIO', $codUsr,
+                    "Bloqueo manual de la cuenta {$usuario->USR_USR}"
+                );
+            });
+
             return back()->with('ok', "Usuario {$usuario->USR_USR} bloqueado.");
         }
 
@@ -70,10 +79,18 @@ class UsuarioController extends Controller
         if ($usuario->EST_USR !== 'Bloqueado') {
             return back()->withErrors(['usuario' => 'Solo se puede desbloquear una cuenta bloqueada.']);
         }
-        DB::table('USUARIO')->where('COD_USR', $codUsr)->update([
-            'EST_USR'    => 'Activo',
-            'INTFAL_USR' => 0, // si no, la primera clave mala ya sumaría 4 intentos
-        ]);
+
+        DB::transaction(function () use ($codUsr, $usuario) {
+            DB::table('USUARIO')->where('COD_USR', $codUsr)->update([
+                'EST_USR'    => 'Activo',
+                'INTFAL_USR' => 0,
+            ]);
+            Auditoria::registrar(
+                'Actualizar', 'Media', 'DOM01', 'USUARIO', $codUsr,
+                "Desbloqueo de la cuenta {$usuario->USR_USR}"
+            );
+        });
+
         return back()->with('ok', "Usuario {$usuario->USR_USR} desbloqueado.");
     }
 }
