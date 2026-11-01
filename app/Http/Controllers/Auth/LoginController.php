@@ -7,7 +7,7 @@ use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-
+use App\Services\Auditoria;
 class LoginController extends Controller
 {
     private const MAX_INTENTOS = 3;
@@ -40,13 +40,21 @@ class LoginController extends Controller
             ])->onlyInput('usuario');
         }
 
-        if (!Hash::check($request->contrasena, $user->CON_USR)) {
+                if (!Hash::check($request->contrasena, $user->CON_USR)) {
             $user->INTFAL_USR++;
 
             if ($user->INTFAL_USR >= self::MAX_INTENTOS) {
                 $user->EST_USR = 'Bloqueado';
             }
             $user->save();
+
+            if ($user->EST_USR === 'Bloqueado') {
+                Auditoria::registrar(
+                    'Actualizar', 'Alta', 'DOM01', 'USUARIO', $user->COD_USR,
+                    "Bloqueo automático de {$user->USR_USR} por " . self::MAX_INTENTOS . ' intentos fallidos',
+                    $user
+                );
+            }
 
             return back()->withErrors($errorGenerico)->onlyInput('usuario');
         }

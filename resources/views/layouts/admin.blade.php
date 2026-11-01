@@ -87,7 +87,38 @@
         .badge { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
         .badge.activo { background: rgba(45,212,191,.15); color: var(--acento); }
         .badge.bloqueado, .badge.inactivo { background: rgba(244,63,94,.15); color: #fda4af; }
-
+                        .barra { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+                                .badge.media { background: rgba(251,191,36,.15); color: #fcd34d; }
+        .barra input {
+            flex: 1; max-width: 340px; padding: 9px 12px;
+            background: var(--panel); border: 1px solid var(--borde);
+            border-radius: 8px; color: var(--texto); font-family: inherit;
+        }
+        .barra select, .barra input[type=date] {
+            flex: none; max-width: none; padding: 9px 12px;
+            background: var(--panel); border: 1px solid var(--borde);
+            border-radius: 8px; color: var(--texto); font-family: inherit;
+            color-scheme: dark;
+        }
+        .btn {
+            padding: 7px 14px; border-radius: 8px; border: 1px solid var(--borde);
+            background: transparent; color: var(--texto); cursor: pointer;
+            font-family: inherit; font-size: 13px; text-decoration: none; display: inline-block;
+        }
+        .btn:hover { border-color: var(--acento); }
+        .btn.peligro:hover { border-color: #fda4af; color: #fda4af; }
+        .alerta { padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+        .alerta.ok { background: rgba(45,212,191,.12); color: var(--acento); }
+        .alerta.error { background: rgba(244,63,94,.12); color: #fda4af; }
+                .formulario { max-width: 520px; }
+        .formulario label { display: block; font-size: 13px; color: #8b98a8; margin-bottom: 6px; }
+        .formulario input, .formulario select {
+            width: 100%; padding: 10px 12px; margin-bottom: 16px;
+            background: var(--panel); border: 1px solid var(--borde);
+            border-radius: 8px; color: var(--texto); font-family: inherit; font-size: 14px;
+        }
+        .formulario input:focus, .formulario select:focus { outline: none; border-color: var(--acento); }
+        .btn.principal { background: var(--acento); color: #06201c; border-color: var(--acento); font-weight: 600; }
         @media (max-width: 800px) {
             aside { position: static; width: 100%; flex-direction: row; overflow-x: auto; }
             body { flex-direction: column; }
@@ -104,7 +135,7 @@
             <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'activo' : '' }}">Dashboard</a>
 
             <div class="nav-titulo">Gestión</div>
-            <a href="{{ route('admin.usuarios') }}" class="{{ request()->routeIs('admin.usuarios') ? 'activo' : '' }}">Usuarios</a>
+            <a href="{{ route('admin.usuarios') }}" class="{{ request()->routeIs('admin.usuarios*') ? 'activo' : '' }}">Usuarios</a>
             <a href="{{ route('admin.pacientes') }}" class="{{ request()->routeIs('admin.pacientes') ? 'activo' : '' }}">Pacientes</a>
             <a href="{{ route('admin.citas') }}" class="{{ request()->routeIs('admin.citas') ? 'activo' : '' }}">Citas</a>
             <a href="{{ route('admin.caja') }}" class="{{ request()->routeIs('admin.caja') ? 'activo' : '' }}">Caja</a>
@@ -127,6 +158,13 @@
             </div>
         </header>
         <main>
+            @if (session('ok'))
+                <div class="alerta ok">{{ session('ok') }}</div>
+            @endif
+            @if ($errors->any())
+                <div class="alerta error">{{ $errors->first() }}</div>
+            @endif
+
             @yield('contenido')
         </main>
     </div>
