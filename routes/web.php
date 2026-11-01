@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\AuditoriaController;
+use App\Http\Controllers\Admin\UsuarioController;
+use App\Http\Controllers\Auth\CambioClaveController;
 use App\Http\Controllers\Auth\LoginController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -13,6 +16,10 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+    // Cambio de contraseña (obligatorio en el primer ingreso)
+    Route::get('/cambiar-clave', [CambioClaveController::class, 'form'])->name('clave.cambiar');
+    Route::post('/cambiar-clave', [CambioClaveController::class, 'actualizar'])->name('clave.actualizar');
 
     // Redirige a cada usuario al panel de su rol
     Route::get('/panel', function () {
@@ -42,13 +49,22 @@ Route::middleware('auth')->group(function () {
             return view('admin.dashboard', compact('totales', 'ultimos'));
         })->name('dashboard');
 
+        // Usuarios
+        Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios');
+        Route::get('/usuarios/crear', [UsuarioController::class, 'create'])->name('usuarios.crear');
+        Route::post('/usuarios', [UsuarioController::class, 'store'])->name('usuarios.guardar');
+        Route::get('/usuarios/{codUsr}/editar', [UsuarioController::class, 'edit'])->name('usuarios.editar');
+        Route::put('/usuarios/{codUsr}', [UsuarioController::class, 'update'])->name('usuarios.actualizar');
+        Route::post('/usuarios/{codUsr}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.estado');
+
+        // Auditoría
+        Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria');
+
         $secciones = [
-            'usuarios'    => 'Usuarios',
             'pacientes'   => 'Pacientes',
             'citas'       => 'Citas',
             'caja'        => 'Caja',
             'internacion' => 'Internación',
-            'auditoria'   => 'Auditoría',
         ];
 
         foreach ($secciones as $slug => $titulo) {
