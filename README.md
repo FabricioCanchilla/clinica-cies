@@ -1,68 +1,58 @@
 # Clínica CIES
 
-Sistema de gestión para la Clínica CIES (La Paz, Bolivia).
+Sistema de gestión administrativa para la Clínica CIES (La Paz, Bolivia).
 Proyecto de Programación 3, UNIFRANZ.
 
-**Stack:** Laravel 13 · PHP 8.5 · MySQL 8.4 (Docker)
+**Stack:** Laravel 13 · PHP 8.4 · MySQL 8.4 · todo corre en Docker.
 
 ## Requisitos
 
-- PHP 8.5 y Composer
-- Docker Desktop (tiene que estar abierto)
+Solo dos cosas. **No hace falta instalar PHP, Composer, XAMPP ni MySQL.**
+
+- Docker Desktop (abierto y corriendo)
 - Git
 
-## Cómo levantar el proyecto
+## Levantar el sistema
 
 ```bash
 git clone https://github.com/FabricioCanchilla/clinica-cies.git
 cd clinica-cies
-
-composer install
-copy .env.example .env
-php artisan key:generate
-
-docker compose up -d
+docker compose up --build
 ```
 
-Espera a que MySQL termine de iniciar (la primera vez crea las 47 tablas y tarda un poco). Para verlo:
+La primera vez tarda unos minutos: descarga las imágenes, instala las dependencias,
+crea las 47 tablas y carga los datos de prueba. Cuando aparezca `Listo. Abre http://localhost:8000`,
+abre ese enlace en el navegador.
+
+Para dejarlo corriendo en segundo plano: `docker compose up -d --build`
+y ver el avance con `docker compose logs -f app`.
+
+| Servicio    | Dirección                                  |
+|-------------|--------------------------------------------|
+| Sistema     | http://localhost:8000                      |
+| phpMyAdmin  | http://localhost:8081 (root / root123)     |
+| MySQL       | 127.0.0.1:3307 (root / root123)            |
+
+## Comandos útiles
 
 ```bash
-docker compose logs -f mysql
+docker compose up -d          # encender
+docker compose down           # apagar (conserva los datos)
+docker compose down -v        # apagar y BORRAR la base de datos y las dependencias
+docker compose logs -f app    # ver logs de la aplicación
+docker exec -it clinica_cies_app php artisan <comando>   # artisan dentro del contenedor
+docker exec -it clinica_cies_db mysql -uroot -p clinica_cies -e "SELECT * FROM USUARIO;"
 ```
-
-Cuando aparezca `ready for connections` por segunda vez, sal con `Ctrl + C` y sigue:
-
-```bash
-php artisan db:seed
-php artisan serve
-```
-
-Abre http://127.0.0.1:8000
 
 ## Base de datos
 
-- No usamos migraciones. La estructura está en `database/sql/01_estructura.sql` y Docker la ejecuta sola la primera vez.
-- Los datos de prueba se cargan con `php artisan db:seed` (roles, empleados, usuarios).
-- MySQL queda en `127.0.0.1:3307` (usuario `root`, contraseña `root123`).
-- phpMyAdmin (opcional): http://localhost:8081 (revisa el puerto en `docker-compose.yml`).
-
-### Si cambias el script SQL
-
-Docker solo ejecuta el script con el volumen vacío. Para recrear la BD (esto **borra los datos**):
-
-```bash
-docker compose down -v
-docker compose up -d
-php artisan db:seed
-```
-
-### Importante
-
-`01_estructura.sql` debe estar guardado en **UTF-8**. Si no, las tildes del script (`Mañana`, `Miércoles`...) se corrompen y fallan los CHECK.
+- No usamos migraciones. La estructura está en `database/sql/01_estructura.sql`
+  y MySQL la ejecuta sola la primera vez que se crea el volumen.
+- Los datos de prueba (roles, empleados, usuarios) se cargan solos si la BD está vacía.
+- Si cambias el SQL, recrea la BD (borra los datos): `docker compose down -v` y luego `docker compose up --build`.
+- `01_estructura.sql` debe estar guardado en **UTF-8**.
 
 ## Usuarios de prueba
-
-La contraseña es el usuario + `123`.
 
 | Usuario    | Contraseña    | Rol           |
 |------------|---------------|---------------|
@@ -73,7 +63,21 @@ La contraseña es el usuario + `123`.
 | caja       | caja123       | Caja          |
 | paciente   | paciente123   | Paciente      |
 
-Cada rol entra a su propio panel. Si intentas abrir el panel de otro rol, devuelve 403.
+Cada rol entra a su propio panel. Si abre el de otro rol, devuelve 403.
+Las cuentas que crea el administrador piden cambiar la contraseña en el primer ingreso.
+
+## Módulo de usuarios (rama `feature/usuarios`)
+
+Entrando como `admin` → **Usuarios** y **Auditoría**:
+
+- Listado con búsqueda, crear usuario para personal, editar usuario y cambiar rol.
+- Bloquear y desbloquear cuentas (un admin no puede modificar su propia cuenta).
+- Bloqueo automático tras 3 intentos fallidos.
+- Cambio de contraseña obligatorio en el primer ingreso.
+- Auditoría de todas las acciones, con filtros por texto, criticidad y fechas.
+
+Pendiente: restablecer contraseña desde el admin, inmutabilidad de `AUDITORIA`
+(usuario de BD sin UPDATE/DELETE) y módulo de empleados.
 
 ## Flujo de trabajo en equipo
 
@@ -86,7 +90,7 @@ git pull origin main
 git checkout -b feature/nombre-de-la-tarea
 ```
 
-- Se hacen commits pequeños y claros, y se sube la rama:
+- Commits pequeños y claros, y se sube la rama:
 
 ```bash
 git add .
@@ -94,19 +98,20 @@ git commit -m "Describe lo que hiciste"
 git push -u origin feature/nombre-de-la-tarea
 ```
 
-- En GitHub se abre un **Pull Request** hacia `main`, y otro compañero lo revisa antes de unirlo.
-- Antes de empezar a trabajar siempre: `git pull origin main`.
+- En GitHub se abre un **Pull Request** hacia `main` y otro compañero lo revisa antes de unirlo.
+- Antes de empezar a trabajar: `git pull origin main`.
 - **Nunca** subir el archivo `.env`.
 
 ## Problemas comunes
 
 | Problema | Solución |
 |----------|----------|
-| `No such container` | Docker Desktop está apagado, o falta `docker compose up -d` |
-| Puerto 3307 ocupado | Cambia `3307:3306` en `docker-compose.yml` y `DB_PORT` en `.env` |
-| `Check constraint ... violated` al sembrar | El SQL se guardó mal; revisa que esté en UTF-8 y recrea la BD con `down -v` |
-| Error de conexión al sembrar | Revisa que `.env` tenga `DB_PORT=3307` y `DB_PASSWORD=root123`, y corre `php artisan config:clear` |
-
+| `Cannot connect to the Docker daemon` | Docker Desktop está apagado; ábrelo y espera a que inicie |
+| Puerto 8000, 8081 o 3307 ocupado | Apaga lo que lo usa, o cambia el puerto izquierdo en `docker-compose.yml` |
+| `container name ... already in use` | Hay contenedores viejos: `docker compose down` y vuelve a levantar |
+| `Check constraint ... violated` | El SQL se guardó mal (debe ser UTF-8): corrige y haz `docker compose down -v` |
+| La app no conecta a la BD | Mira `docker compose logs mysql`; espera a que MySQL termine de iniciar |
+| Tenías la BD de antes y falta la columna `CAMCON_USR` | `docker compose down -v` y levanta de nuevo |
 ```text
  /\_/\
 ( o.o )  ~~~  VAMOS KRAJO
@@ -119,4 +124,4 @@ git push -u origin feature/nombre-de-la-tarea
 ░░░░▀▀▀▀░▀▀▀▀░░▀▀▀░▀▀▀░░▀░░░░
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ```
-prueba 1
+prueba 2 mdfk
