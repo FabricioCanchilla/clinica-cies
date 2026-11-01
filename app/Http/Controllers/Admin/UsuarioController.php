@@ -262,4 +262,43 @@ public function update(Request $request, string $codUsr)
 
     return redirect()->route('admin.usuarios')->with('ok', 'Usuario actualizado correctamente.');
 }
+    public function resetClave(string $codUsr)
+    {
+        $usuario = DB::table('USUARIO')->where('COD_USR', $codUsr)->first();
+        abort_if(!$usuario, 404);
+
+        // Un admin no puede restablecer su propia clave desde aquí
+        if ($usuario->COD_USR === Auth::user()->COD_USR) {
+            return back()->withErrors(['usuario' => 'No puedes restablecer tu propia contraseña desde aquí.']);
+        }
+
+        if ($usuario->EST_USR === 'Inactivo') {
+            return back()->withErrors(['usuario' => 'No se puede restablecer la clave de una cuenta inactiva.']);
+        }
+
+        // Clave temporal de 10 caracteres, sin símbolos que se confundan (0/O, 1/l/I)
+        $alfabeto = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        $clave = '';
+        for ($i = 0; $i < 10; $i++) {
+            $clave .= $alfabeto[random_int(0, strlen($alfabeto) - 1)];
+        }
+
+        $estabaBloqueado = $usuario->EST_USR === 'Bloqueado';
+
+        DB::transaction(function () use ($codUsr, $usuario, $clave, $estabaBloqueado) {
+            DB::table('USUARIO')->where('COD_USR', $codUsr)->update([
+                'CON_USR'    => Hash::make($clave),
+                'CAMCON_USR' => 1,
+                'EST_USR'    => 'Activo',
+                'INTFAL_USR' => 0,
+            ]);
+
+            Auditoria::registrar(
+                'Actualizar', 'Alta', 'DOM01', 'USUARIO', $codUsr,
+                "Restablecimiento de contraseña de {$usuario->USR_USR}" . ($estabaBloqueado ? ' (cuenta desbloqueada)' : '')
+            );
+        });
+
+        return back()->with('ok', "Clave temporal de {$usuario->USR_USR}: {$clave} — anótala, no se vuelve a mostrar. Deberá cambiarla al ingresar.");
+    }
 }

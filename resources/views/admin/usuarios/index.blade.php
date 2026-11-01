@@ -60,6 +60,13 @@
                                         <button type="submit" class="btn">Desbloquear</button>
                                     </form>
                                 @endif
+                                                                @if ($u->COD_USR !== auth()->user()->COD_USR && $u->EST_USR !== 'Inactivo')
+                                    <form method="POST" action="{{ route('admin.usuarios.reset', $u->COD_USR) }}"
+                                          onsubmit="return confirm('¿Restablecer la clave de {{ $u->USR_USR }}?')">
+                                        @csrf
+                                        <button type="submit" class="btn">Restablecer clave</button>
+                                    </form>
+                                @endif
                             </div>
                         </td>
                     </tr>
