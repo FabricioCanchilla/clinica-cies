@@ -49,14 +49,16 @@ Route::middleware('auth')->group(function () {
             return view('admin.dashboard', compact('totales', 'ultimos'));
         })->name('dashboard');
 
+        // Usuarios
         Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios');
-        Route::post('/usuarios/{codUsr}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.estado');
-
-        Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria');
-                Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios');
         Route::get('/usuarios/crear', [UsuarioController::class, 'create'])->name('usuarios.crear');
         Route::post('/usuarios', [UsuarioController::class, 'store'])->name('usuarios.guardar');
+        Route::get('/usuarios/{codUsr}/editar', [UsuarioController::class, 'edit'])->name('usuarios.editar');
+        Route::put('/usuarios/{codUsr}', [UsuarioController::class, 'update'])->name('usuarios.actualizar');
         Route::post('/usuarios/{codUsr}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.estado');
+
+        // Auditoría
+        Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria');
 
         $secciones = [
             'pacientes'   => 'Pacientes',

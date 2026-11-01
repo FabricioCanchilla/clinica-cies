@@ -17,7 +17,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'rol' => VerificarRol::class,
         ]);
-        $middleware->appendToGroup('web', VerificarActivo::class);
                 $middleware->appendToGroup('web', VerificarActivo::class);
         $middleware->appendToGroup('web', ForzarCambioClave::class);
     })

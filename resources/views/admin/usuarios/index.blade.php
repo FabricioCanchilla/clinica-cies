@@ -5,7 +5,8 @@
 @section('contenido')
     <h1>Usuarios</h1>
     <p class="sub">Cuentas de acceso del personal y de los pacientes.</p>
-        <p style="margin-bottom: 18px;">
+
+    <p style="margin-bottom: 18px;">
         <a href="{{ route('admin.usuarios.crear') }}" class="btn principal">+ Nuevo usuario</a>
     </p>
 
@@ -27,6 +28,7 @@
                     <th>Estado</th>
                     <th>Intentos fallidos</th>
                     <th>Último acceso</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -38,25 +40,27 @@
                         <td><span class="badge {{ strtolower($u->EST_USR) }}">{{ $u->EST_USR }}</span></td>
                         <td>{{ $u->INTFAL_USR }}</td>
                         <td>{{ $u->FECULT_USR ? \Carbon\Carbon::parse($u->FECULT_USR)->format('d/m/Y H:i') : 'Nunca' }}</td>
-                                                <td>
-                            @if ($u->COD_USR === auth()->user()->COD_USR)
-                                <span style="color: var(--texto-suave, #888);">Tu cuenta</span>
-                            @elseif ($u->EST_USR === 'Activo')
-                                <form method="POST" action="{{ route('admin.usuarios.estado', $u->COD_USR) }}"
-                                      onsubmit="return confirm('¿Bloquear a {{ $u->USR_USR }}?')">
-                                    @csrf
-                                    <input type="hidden" name="accion" value="bloquear">
-                                    <button type="submit" class="btn peligro">Bloquear</button>
-                                </form>
-                            @elseif ($u->EST_USR === 'Bloqueado')
-                                <form method="POST" action="{{ route('admin.usuarios.estado', $u->COD_USR) }}">
-                                    @csrf
-                                    <input type="hidden" name="accion" value="desbloquear">
-                                    <button type="submit" class="btn">Desbloquear</button>
-                                </form>
-                            @else
-                                —
-                            @endif
+                        <td>
+                            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <a href="{{ route('admin.usuarios.editar', $u->COD_USR) }}" class="btn">Editar</a>
+
+                                @if ($u->COD_USR === auth()->user()->COD_USR)
+                                    <span style="color: var(--texto-suave, #888);">Tu cuenta</span>
+                                @elseif ($u->EST_USR === 'Activo')
+                                    <form method="POST" action="{{ route('admin.usuarios.estado', $u->COD_USR) }}"
+                                          onsubmit="return confirm('¿Bloquear a {{ $u->USR_USR }}?')">
+                                        @csrf
+                                        <input type="hidden" name="accion" value="bloquear">
+                                        <button type="submit" class="btn peligro">Bloquear</button>
+                                    </form>
+                                @elseif ($u->EST_USR === 'Bloqueado')
+                                    <form method="POST" action="{{ route('admin.usuarios.estado', $u->COD_USR) }}">
+                                        @csrf
+                                        <input type="hidden" name="accion" value="desbloquear">
+                                        <button type="submit" class="btn">Desbloquear</button>
+                                    </form>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\Auditoria;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 class UsuarioController extends Controller
 {
     public function index(Request $request)
@@ -170,4 +171,95 @@ class UsuarioController extends Controller
 
         return redirect()->route('admin.usuarios')->with('ok', "Usuario {$request->usuario} creado. Deberá cambiar su contraseña al ingresar.");
     }
+    public function edit(string $codUsr)
+{
+    $usuario = DB::table('USUARIO')->where('COD_USR', $codUsr)->first();
+    abort_if(!$usuario, 404);
+
+    $roles = DB::table('ROL')
+        ->where('COD_ROL', '!=', 'ROL006')
+        ->orderBy('COD_ROL')
+        ->get();
+
+    $esPropio   = $usuario->COD_USR === auth()->user()->COD_USR;
+    $esPaciente = $usuario->COD_ROL === 'ROL006';
+
+    return view('admin.usuarios.editar', compact('usuario', 'roles', 'esPropio', 'esPaciente'));
+}
+
+public function update(Request $request, string $codUsr)
+{
+    $usuario = DB::table('USUARIO')->where('COD_USR', $codUsr)->first();
+    abort_if(!$usuario, 404);
+
+    $esPropio   = $usuario->COD_USR === auth()->user()->COD_USR;
+    $esPaciente = $usuario->COD_ROL === 'ROL006';
+    $puedeCambiarRol = !$esPropio && !$esPaciente;
+
+    $reglas = [
+        'usuario' => [
+            'required', 'string', 'min:4', 'max:20',
+            'regex:/^[A-Za-z0-9._-]+$/',
+            Rule::unique('USUARIO', 'USR_USR')->ignore($codUsr, 'COD_USR'),
+        ],
+    ];
+
+    if ($puedeCambiarRol) {
+        $reglas['rol'] = [
+            'required',
+            Rule::exists('ROL', 'COD_ROL'),
+            Rule::notIn(['ROL006']),
+        ];
+    }
+
+    $datos = $request->validate($reglas, [
+        'usuario.required' => 'El nombre de usuario es obligatorio.',
+        'usuario.min'      => 'El usuario debe tener al menos 4 caracteres.',
+        'usuario.max'      => 'El usuario no puede pasar de 20 caracteres.',
+        'usuario.regex'    => 'Solo letras, números, punto, guion y guion bajo.',
+        'usuario.unique'   => 'Ese nombre de usuario ya está en uso.',
+        'rol.required'     => 'Selecciona un rol.',
+        'rol.exists'       => 'El rol seleccionado no existe.',
+        'rol.not_in'       => 'No se puede asignar ese rol a personal.',
+    ]);
+
+    $nuevoUsuario = $datos['usuario'];
+    $nuevoRol     = $puedeCambiarRol ? $datos['rol'] : $usuario->COD_ROL;
+
+    $cambioUsuario = $nuevoUsuario !== $usuario->USR_USR;
+    $cambioRol     = $nuevoRol !== $usuario->COD_ROL;
+
+    if (!$cambioUsuario && !$cambioRol) {
+        return redirect()->route('admin.usuarios')->with('ok', 'No hubo cambios que guardar.');
+    }
+
+    DB::transaction(function () use ($codUsr, $usuario, $nuevoUsuario, $nuevoRol, $cambioUsuario, $cambioRol) {
+        DB::table('USUARIO')->where('COD_USR', $codUsr)->update([
+            'USR_USR' => $nuevoUsuario,
+            'COD_ROL' => $nuevoRol,
+        ]);
+
+        $partes = [];
+        if ($cambioUsuario) {
+            $partes[] = "Usuario: {$usuario->USR_USR} -> {$nuevoUsuario}";
+        }
+        if ($cambioRol) {
+            $partes[] = "Rol: {$usuario->COD_ROL} -> {$nuevoRol}";
+        }
+
+        $tocaAdmin = $cambioRol && ($usuario->COD_ROL === 'ROL001' || $nuevoRol === 'ROL001');
+        $criticidad = $tocaAdmin ? 'Alta' : 'Media';
+
+        Auditoria::registrar(
+            'Actualizar',
+            $criticidad,
+            'DOM01',
+            'USUARIO',
+            $codUsr,
+            mb_substr(implode('; ', $partes), 0, 255)
+        );
+    });
+
+    return redirect()->route('admin.usuarios')->with('ok', 'Usuario actualizado correctamente.');
+}
 }
