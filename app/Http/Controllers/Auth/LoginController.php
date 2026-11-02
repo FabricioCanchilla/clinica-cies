@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Services\Auditoria;
+
 class LoginController extends Controller
 {
     private const MAX_INTENTOS = 3;
@@ -24,10 +25,11 @@ class LoginController extends Controller
             'contrasena' => 'required|string',
         ]);
 
-        $user = Usuario::where('USR_USR', $request->usuario)->first();
+        $input = trim($request->usuario);
 
-        // Mismo mensaje si el usuario no existe o la clave es mala,
-        // así nadie puede averiguar qué usuarios existen
+        // Buscamos únicamente por el nombre de usuario
+        $user = Usuario::where('USR_USR', $input)->first();
+
         $errorGenerico = ['usuario' => 'Usuario o contraseña incorrectos.'];
 
         if (!$user) {
@@ -40,7 +42,7 @@ class LoginController extends Controller
             ])->onlyInput('usuario');
         }
 
-                if (!Hash::check($request->contrasena, $user->CON_USR)) {
+        if (!Hash::check($request->contrasena, $user->CON_USR)) {
             $user->INTFAL_USR++;
 
             if ($user->INTFAL_USR >= self::MAX_INTENTOS) {
@@ -59,7 +61,7 @@ class LoginController extends Controller
             return back()->withErrors($errorGenerico)->onlyInput('usuario');
         }
 
-        // Login correcto: reiniciar intentos y registrar último acceso
+        // Login correcto
         $user->INTFAL_USR = 0;
         $user->FECULT_USR = now();
         $user->save();
