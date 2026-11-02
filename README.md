@@ -124,4 +124,10 @@ git push -u origin feature/nombre-de-la-tarea
 ░░░░▀▀▀▀░▀▀▀▀░░▀▀▀░▀▀▀░░▀░░░░
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ```
+<<<<<<< HEAD
 prueba 2 mdfk
+=======
+prueba 2 mdfk
+
+ALAN ARANDA
+>>>>>>> feature/panel-medico
