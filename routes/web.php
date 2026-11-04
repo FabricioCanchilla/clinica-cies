@@ -1,5 +1,5 @@
 <?php
-
+use App\Http\Controllers\Admin\PacienteController;
 use App\Http\Controllers\Admin\AuditoriaController;
 use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\Auth\CambioClaveController;
@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Medico\DashboardController as MedicoDashboardController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+
 
 Route::get('/', fn () => redirect()->route('panel'));
 
@@ -82,18 +83,20 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria');
 
-        $secciones = [
-            'pacientes'   => 'Pacientes',
-            'citas'       => 'Citas',
-            'caja'        => 'Caja',
-            'internacion' => 'Internación',
-        ];
+        Route::get('/pacientes', [PacienteController::class, 'index'])
+    ->name('pacientes');
 
-        foreach ($secciones as $slug => $titulo) {
-            Route::get("/$slug", fn () => view('admin.pendiente', ['titulo' => $titulo]))
-                ->name($slug);
-        }
-    });
+$secciones = [
+    'citas'       => 'Citas',
+    'caja'        => 'Caja',
+    'internacion' => 'Internación',
+];
+
+foreach ($secciones as $slug => $titulo) {
+    Route::get("/$slug", fn () => view('admin.pendiente', ['titulo' => $titulo]))
+        ->name($slug);
+}
+}); // Cierre del grupo administrativo
 
     // 3. Panel de Médico
     Route::middleware('rol:ROL003')->prefix('medico')->name('medico.')->group(function () {
