@@ -5,6 +5,15 @@ Proyecto de Programación 3, UNIFRANZ.
 
 **Stack:** Laravel 13 · PHP 8.4 · MySQL 8.4 · todo corre en Docker.
 
+## Integrantes del grupo
+
+| Nombre completo | Rol | Usuario GitHub |
+|-----------------|-----|----------------|
+| Aranda Silva Alan Cristhofer |  lider del proyecto,Desarrollo backend y vistas, panel del médico | [alanhack777](https://github.com/alanhack777) |
+| Canchilla Mamani Isaac Fabricio |  Docker y base de datos, módulo de usuarios y auditoría | [FabricioCanchilla](https://github.com/FabricioCanchilla) |
+| Quispe Mamani Rosmery | Desarrollo backend y vistas, módulo de pacientes | [rosmeryqm2020-afk](https://github.com/rosmeryqm2020-afk) |
+| Copa Pérez Neyda Milena | Documentación, pruebas y módulo de caja | [Milenacopa120-0409](https://github.com/Milenacopa120-0409) |
+
 ## Requisitos
 
 Solo dos cosas. **No hace falta instalar PHP, Composer, XAMPP ni MySQL.**
@@ -112,24 +121,3 @@ git push -u origin feature/nombre-de-la-tarea
 | `Check constraint ... violated` | El SQL se guardó mal (debe ser UTF-8): corrige y haz `docker compose down -v` |
 | La app no conecta a la BD | Mira `docker compose logs mysql`; espera a que MySQL termine de iniciar |
 | Tenías la BD de antes y falta la columna `CAMCON_USR` | `docker compose down -v` y levanta de nuevo |
-```text
- /\_/\
-( o.o )  ~~~  VAMOS KRAJO
- > ^ <
-```
-```text
-░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-░░░░█▀▀▀░█▀▀▀░░█▀▀░▀▀█░░█░░░░
-░░░░█░▀█░█░▀█░░█▀▀░▄▀░░░▀░░░░
-░░░░▀▀▀▀░▀▀▀▀░░▀▀▀░▀▀▀░░▀░░░░
-░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-```
-<<<<<<< HEAD
-prueba 2 mdfk
-=======
-prueba 2 mdfk
-
-ALAN ARANDA
->>>>>>> feature/panel-medico
- 
-ROSY EM YA ISE LA PRUEBA XD 
