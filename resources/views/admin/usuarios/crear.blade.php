@@ -6,10 +6,13 @@
     <h1>Nuevo usuario</h1>
     <p class="sub">Crea la cuenta de acceso de un empleado. Deberá cambiar la contraseña en su primer ingreso.</p>
 
-    @if ($empleados->isEmpty())
-        <div class="alerta error">No hay empleados sin usuario. Primero hay que registrar al empleado.</div>
+   @if ($empleados->isEmpty())
+    <div class="alerta error">No hay empleados sin usuario. Primero hay que registrar al empleado.</div>
+    <div style="display: flex; gap: 10px;">
+        <a href="{{ route('admin.empleados.crear') }}" class="btn principal">+ Registrar empleado</a>
         <a href="{{ route('admin.usuarios') }}" class="btn">← Volver</a>
-    @else
+    </div>
+@else
         <form method="POST" action="{{ route('admin.usuarios.guardar') }}" class="card formulario">
             @csrf
 
