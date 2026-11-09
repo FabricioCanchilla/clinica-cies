@@ -7,7 +7,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Medico\DashboardController as MedicoDashboardController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\Admin\EmpleadoController;
 
 Route::get('/', fn () => redirect()->route('panel'));
 
@@ -80,6 +80,11 @@ Route::middleware('auth')->group(function () {
         Route::put('/usuarios/{codUsr}', [UsuarioController::class, 'update'])->name('usuarios.actualizar');
         Route::post('/usuarios/{codUsr}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.estado');
         Route::post('/usuarios/{codUsr}/reset-clave', [UsuarioController::class, 'resetClave'])->name('usuarios.reset');
+        Route::get('/empleados', [EmpleadoController::class, 'index'])->name('empleados');
+        Route::get('/empleados/crear', [EmpleadoController::class, 'create'])->name('empleados.crear');
+        Route::post('/empleados', [EmpleadoController::class, 'store'])->name('empleados.guardar');
+        Route::get('/empleados/{codEmp}/editar', [EmpleadoController::class, 'edit'])->name('empleados.editar');
+        Route::put('/empleados/{codEmp}', [EmpleadoController::class, 'update'])->name('empleados.actualizar');
 
         Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria');
 
