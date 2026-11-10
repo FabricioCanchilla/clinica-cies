@@ -16,6 +16,9 @@ class UsuariosPruebaSeeder extends Seeder
             ['COD_CAR' => 'CAR0003', 'DES_CAR' => 'Medico'],
             ['COD_CAR' => 'CAR0004', 'DES_CAR' => 'Enfermero'],
             ['COD_CAR' => 'CAR0005', 'DES_CAR' => 'Cajero'],
+            ['COD_CAR' => 'CAR0006', 'DES_CAR' => 'Laboratorista'],
+            ['COD_CAR' => 'CAR0007', 'DES_CAR' => 'Farmaceutico'],
+            ['COD_CAR' => 'CAR0008', 'DES_CAR' => 'Auditor'],
         ]);
 
         // [cod_emp, ci, nombre, titulo, cargo, usuario, cod_usr, rol]
@@ -24,6 +27,9 @@ class UsuariosPruebaSeeder extends Seeder
             ['EMP000003', '2000002', 'Carlos', 'Dr',  'CAR0003', 'medico',     'USR00003', 'ROL003'],
             ['EMP000004', '2000003', 'Lucia',  'Lic', 'CAR0004', 'enfermeria', 'USR00004', 'ROL004'],
             ['EMP000005', '2000004', 'Pedro',  'Lic', 'CAR0005', 'caja',       'USR00005', 'ROL005'],
+            ['EMP000006', '2000005', 'Sofia',  'Lic', 'CAR0006', 'laboratorio', 'USR00007', 'ROL007'],
+            ['EMP000007', '2000006', 'Marco',  'Lic', 'CAR0007', 'farmacia',    'USR00008', 'ROL008'],
+            ['EMP000008', '2000007', 'Elena',  'Lic', 'CAR0008', 'auditor',     'USR00009', 'ROL009'],
         ];
 
         foreach ($empleados as [$codEmp, $ci, $nombre, $titulo, $cargo, $usr, $codUsr, $rol]) {
