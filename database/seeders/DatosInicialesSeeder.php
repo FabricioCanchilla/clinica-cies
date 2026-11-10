@@ -10,7 +10,7 @@ class DatosInicialesSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Los 6 roles
+        // 1. Los 9 roles
         DB::table('ROL')->insertOrIgnore([
             ['COD_ROL' => 'ROL001', 'DES_ROL' => 'Administrador'],
             ['COD_ROL' => 'ROL002', 'DES_ROL' => 'Recepcionista'],
@@ -18,6 +18,9 @@ class DatosInicialesSeeder extends Seeder
             ['COD_ROL' => 'ROL004', 'DES_ROL' => 'Enfermeria'],
             ['COD_ROL' => 'ROL005', 'DES_ROL' => 'Caja'],
             ['COD_ROL' => 'ROL006', 'DES_ROL' => 'Paciente'],
+            ['COD_ROL' => 'ROL007', 'DES_ROL' => 'Laboratorio'],
+            ['COD_ROL' => 'ROL008', 'DES_ROL' => 'Farmacia'],
+            ['COD_ROL' => 'ROL009', 'DES_ROL' => 'Auditor'],
         ]);
 
         // 2. Un cargo (el empleado lo exige)
