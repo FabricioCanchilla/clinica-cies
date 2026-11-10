@@ -252,40 +252,55 @@
     <aside>
         <div class="marca">Clínica <span>CIES</span></div>
         <nav>
-            <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'activo' : '' }}">
-                <i class="fas fa-home"></i> Dashboard
-            </a>
+            @if (auth()->user()->COD_ROL === 'ROL001')
+                <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'activo' : '' }}">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
 
-            <div class="nav-titulo">Gestión</div>
-            <a href="{{ route('admin.usuarios') }}" class="{{ request()->routeIs('admin.usuarios*') ? 'activo' : '' }}">
-                <i class="fas fa-users"></i> Usuarios
-            </a>
-            <a href="{{ route('admin.empleados') }}" class="{{ request()->routeIs('admin.empleados*') ? 'activo' : '' }}">
-                <i class="fas fa-id-badge"></i> Empleados
-            </a>
-            <a href="{{ route('admin.pacientes') }}" class="{{ request()->routeIs('admin.pacientes*') ? 'activo' : '' }}">
-                <i class="fas fa-user-injured"></i> Pacientes
-            </a>
-            <a href="{{ route('admin.citas') }}" class="{{ request()->routeIs('admin.citas*') ? 'activo' : '' }}">
-                <i class="fas fa-calendar-check"></i> Citas
-            </a>
-            <a href="{{ route('admin.caja') }}" class="{{ request()->routeIs('admin.caja*') ? 'activo' : '' }}">
-                <i class="fas fa-cash-register"></i> Caja
-            </a>
-            <a href="{{ route('admin.internacion') }}" class="{{ request()->routeIs('admin.internacion*') ? 'activo' : '' }}">
-                <i class="fas fa-bed"></i> Internación
-            </a>
+                <div class="nav-titulo">Gestión</div>
+                <a href="{{ route('admin.usuarios') }}" class="{{ request()->routeIs('admin.usuarios*') ? 'activo' : '' }}">
+                    <i class="fas fa-users"></i> Usuarios
+                </a>
+                <a href="{{ route('admin.empleados') }}" class="{{ request()->routeIs('admin.empleados*') ? 'activo' : '' }}">
+                    <i class="fas fa-id-badge"></i> Empleados
+                </a>
+                <a href="{{ route('admin.pacientes') }}" class="{{ request()->routeIs('admin.pacientes*') ? 'activo' : '' }}">
+                    <i class="fas fa-user-injured"></i> Pacientes
+                </a>
+                <a href="{{ route('admin.citas') }}" class="{{ request()->routeIs('admin.citas*') ? 'activo' : '' }}">
+                    <i class="fas fa-calendar-check"></i> Citas
+                </a>
+                <a href="{{ route('admin.caja') }}" class="{{ request()->routeIs('admin.caja*') ? 'activo' : '' }}">
+                    <i class="fas fa-cash-register"></i> Caja
+                </a>
+                <a href="{{ route('admin.internacion') }}" class="{{ request()->routeIs('admin.internacion*') ? 'activo' : '' }}">
+                    <i class="fas fa-bed"></i> Internación
+                </a>
 
-            <div class="nav-titulo">Control</div>
-            <a href="{{ route('admin.auditoria') }}" class="{{ request()->routeIs('admin.auditoria*') ? 'activo' : '' }}">
-                <i class="fas fa-clipboard-list"></i> Auditoría
-            </a>
+                <div class="nav-titulo">Control</div>
+                <a href="{{ route('admin.auditoria') }}" class="{{ request()->routeIs('admin.auditoria*') ? 'activo' : '' }}">
+                    <i class="fas fa-clipboard-list"></i> Auditoría
+                </a>
+            @elseif (auth()->user()->COD_ROL === 'ROL009')
+                <div class="nav-titulo">Control</div>
+                <a href="{{ route('admin.auditoria') }}" class="{{ request()->routeIs('admin.auditoria*') ? 'activo' : '' }}">
+                    <i class="fas fa-clipboard-list"></i> Auditoría
+                </a>
+            @elseif (auth()->user()->COD_ROL === 'ROL007')
+                <a href="{{ route('laboratorio.dashboard') }}" class="activo">
+                    <i class="fas fa-flask"></i> Órdenes de examen
+                </a>
+            @elseif (auth()->user()->COD_ROL === 'ROL008')
+                <a href="{{ route('farmacia.dashboard') }}" class="activo">
+                    <i class="fas fa-pills"></i> Recetas
+                </a>
+            @endif
         </nav>
     </aside>
 
     <div class="contenido">
         <header>
-            <span class="titulo">Panel de Administración</span>
+            <span class="titulo">Panel de {{ config('roles.' . auth()->user()->COD_ROL . '.nombre') }}</span>
             <div class="quien">
                 <span><i class="fas fa-user-shield"></i> {{ auth()->user()->USR_USR }} · {{ config('roles.' . auth()->user()->COD_ROL . '.nombre') }}</span>
                 <form method="POST" action="{{ route('logout') }}">

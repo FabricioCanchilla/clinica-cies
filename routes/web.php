@@ -43,6 +43,9 @@ Route::middleware('auth')->group(function () {
             'ROL004' => 'enfermeria.dashboard',
             'ROL005' => 'caja.dashboard',
             'ROL006' => 'paciente.dashboard',
+            'ROL007' => 'laboratorio.dashboard',
+            'ROL008' => 'farmacia.dashboard',
+            'ROL009' => 'auditor.dashboard',
         ];
 
         if (array_key_exists($rol, $rutasPorRol)) {
@@ -85,9 +88,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/empleados', [EmpleadoController::class, 'store'])->name('empleados.guardar');
         Route::get('/empleados/{codEmp}/editar', [EmpleadoController::class, 'edit'])->name('empleados.editar');
         Route::put('/empleados/{codEmp}', [EmpleadoController::class, 'update'])->name('empleados.actualizar');
-
-        Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria');
-
         Route::get('/pacientes', [PacienteController::class, 'index'])
     ->name('pacientes');
 
@@ -114,6 +114,8 @@ foreach ($secciones as $slug => $titulo) {
         'ROL004' => 'enfermeria',
         'ROL005' => 'caja',
         'ROL006' => 'paciente',
+        'ROL007' => 'laboratorio',
+        'ROL008' => 'farmacia',
     ];
 
     foreach ($otros as $codigo => $slug) {
@@ -121,4 +123,12 @@ foreach ($secciones as $slug => $titulo) {
             Route::get("/$slug", fn () => view('pendiente'))->name("$slug.dashboard");
         });
     }
+        // Auditoría: la ven el administrador y el auditor
+    Route::middleware('rol:ROL001,ROL009')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria');
+    });
+
+    // El auditor entra directo a la auditoría
+    Route::middleware('rol:ROL009')->get('/auditor', fn () => redirect()->route('admin.auditoria'))
+        ->name('auditor.dashboard');
 });
