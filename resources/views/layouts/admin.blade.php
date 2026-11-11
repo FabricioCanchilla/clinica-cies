@@ -290,9 +290,12 @@
                 <a href="{{ route('laboratorio.dashboard') }}" class="activo">
                     <i class="fas fa-flask"></i> Órdenes de examen
                 </a>
-            @elseif (auth()->user()->COD_ROL === 'ROL008')
-                <a href="{{ route('farmacia.dashboard') }}" class="activo">
-                    <i class="fas fa-pills"></i> Recetas
+                @elseif (auth()->user()->COD_ROL === 'ROL008')
+                <a href="{{ route('farmacia.dashboard') }}" class="{{ request()->routeIs('farmacia.dashboard', 'farmacia.receta', 'farmacia.despachar') ? 'activo' : '' }}">
+                    <i class="fas fa-prescription-bottle-medical"></i> Recetas
+                </a>
+                    <a href="{{ route('farmacia.lotes') }}" class="{{ request()->routeIs('farmacia.lotes*') ? 'activo' : '' }}">
+                    <i class="fas fa-boxes-stacked"></i> Lotes y stock
                 </a>
             @endif
         </nav>

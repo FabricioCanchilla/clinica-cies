@@ -8,6 +8,9 @@ use App\Http\Controllers\Medico\DashboardController as MedicoDashboardController
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\EmpleadoController;
+use App\Http\Controllers\Laboratorio\OrdenController as LabOrdenController;
+use App\Http\Controllers\Farmacia\RecetaController as FarmRecetaController;
+use App\Http\Controllers\Farmacia\LoteController as FarmLoteController;
 
 Route::get('/', fn () => redirect()->route('panel'));
 
@@ -107,15 +110,33 @@ foreach ($secciones as $slug => $titulo) {
     Route::middleware('rol:ROL003')->prefix('medico')->name('medico.')->group(function () {
         Route::get('/', [MedicoDashboardController::class, 'index'])->name('dashboard');
     });
+    // Panel de Laboratorio (ROL007)
+    Route::middleware('rol:ROL007')->prefix('laboratorio')->name('laboratorio.')->group(function () {
+        Route::get('/', [LabOrdenController::class, 'index'])->name('dashboard');
+        Route::post('/ordenes/{codOrd}/avanzar', [LabOrdenController::class, 'avanzar'])->name('avanzar');
+        Route::post('/ordenes/{codOrd}/cancelar', [LabOrdenController::class, 'cancelar'])->name('cancelar');
+        Route::get('/ordenes/{codOrd}/resultado', [LabOrdenController::class, 'formResultado'])->name('resultado');
+        Route::post('/ordenes/{codOrd}/resultado', [LabOrdenController::class, 'guardarResultado'])->name('resultado.guardar');
+        Route::post('/ordenes/{codOrd}/validar', [LabOrdenController::class, 'validar'])->name('validar');
+        Route::post('/ordenes/{codOrd}/publicar', [LabOrdenController::class, 'publicar'])->name('publicar');
+    });
+        // Panel de Farmacia (ROL008)
+    Route::middleware('rol:ROL008')->prefix('farmacia')->name('farmacia.')->group(function () {
+        Route::get('/', [FarmRecetaController::class, 'index'])->name('dashboard');
+        Route::get('/recetas/{codRec}', [FarmRecetaController::class, 'show'])->name('receta');
+        Route::post('/recetas/{codRec}/items/{codDre}/despachar', [FarmRecetaController::class, 'despachar'])->name('despachar');
 
+        Route::get('/lotes', [FarmLoteController::class, 'index'])->name('lotes');
+        Route::post('/lotes', [FarmLoteController::class, 'entrada'])->name('lotes.entrada');
+        Route::get('/lotes/{codLot}/baja', [FarmLoteController::class, 'formBaja'])->name('lotes.baja');
+        Route::post('/lotes/{codLot}/baja', [FarmLoteController::class, 'guardarBaja'])->name('lotes.baja.guardar');
+    });
     // 4. Panel de los demás roles
     $otros = [
         'ROL002' => 'recepcion',
         'ROL004' => 'enfermeria',
         'ROL005' => 'caja',
         'ROL006' => 'paciente',
-        'ROL007' => 'laboratorio',
-        'ROL008' => 'farmacia',
     ];
 
     foreach ($otros as $codigo => $slug) {
