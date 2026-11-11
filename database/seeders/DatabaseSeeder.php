@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             DatosInicialesSeeder::class,   // roles, cargo, empleado y usuario admin
             UsuariosPruebaSeeder::class,   // recepcion, medico, enfermeria, caja y paciente
+            DatosClinicosPruebaSeeder::class,
         ]);
     }
 }
