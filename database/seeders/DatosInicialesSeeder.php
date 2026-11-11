@@ -60,6 +60,9 @@ class DatosInicialesSeeder extends Seeder
                 // 5. Dominios de auditoría
         DB::table('DOMINIO_AUD')->insertOrIgnore([
             ['COD_DOM' => 'DOM01', 'DES_DOM' => 'Usuarios y accesos'],
+            ['COD_DOM' => 'DOM02', 'DES_DOM' => 'Seguridad y autenticación'],
+            ['COD_DOM' => 'DOM03', 'DES_DOM' => 'Clínico'],
+            ['COD_DOM' => 'DOM04', 'DES_DOM' => 'Financiero'],
         ]);
     }
 }
