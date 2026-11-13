@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
  *
  * Flujo de una orden:  Pendiente -> Muestra tomada -> En proceso -> (resultado) -> Listo
  * Flujo del resultado: Cargado -> Validado -> Publicado   (al publicar, la orden pasa a Listo)
- * Todo cambio queda en AUDITORIA con el dominio DOM03 (clínico).
+ * Todo cambio queda en AUDITORIA con el dominio DOM03 (clínico) y el paciente afectado (COD_PAC).
  */
 class LaboratorioService
 {
@@ -107,7 +107,9 @@ class LaboratorioService
 
             Auditoria::registrar(
                 'Actualizar', 'Media', self::DOMINIO, 'ORDEN_EXAMEN', $codOrd,
-                "Estado: {$orden->EST_ORD} -> {$nuevo}", $actor
+                "Estado: {$orden->EST_ORD} -> {$nuevo}",
+                $actor,
+                codPac: $this->pacienteDeOrden($orden)
             );
 
             return $nuevo;
@@ -128,7 +130,9 @@ class LaboratorioService
 
             Auditoria::registrar(
                 'Actualizar', 'Media', self::DOMINIO, 'ORDEN_EXAMEN', $codOrd,
-                'Estado: Pendiente -> Cancelado', $actor
+                'Estado: Pendiente -> Cancelado',
+                $actor,
+                codPac: $this->pacienteDeOrden($orden)
             );
         });
     }
@@ -166,7 +170,9 @@ class LaboratorioService
 
             Auditoria::registrar(
                 'Crear', $critico ? 'Crítica' : 'Alta', self::DOMINIO, 'RESULTADO_EXAMEN', $codRes,
-                "Resultado cargado para la orden {$codOrd}" . ($critico ? ' (valor crítico)' : ''), $actor
+                "Resultado cargado para la orden {$codOrd}" . ($critico ? ' (valor crítico)' : ''),
+                $actor,
+                codPac: $this->pacienteDeOrden($orden)
             );
 
             return $codRes;
@@ -177,7 +183,7 @@ class LaboratorioService
     public function validar(string $codOrd, object $actor): void
     {
         DB::transaction(function () use ($codOrd, $actor) {
-            $this->bloquearOrden($codOrd);
+            $orden = $this->bloquearOrden($codOrd);
             $res = $this->resultadoBloqueado($codOrd);
 
             if ($res->EST_RES !== 'Cargado') {
@@ -188,7 +194,9 @@ class LaboratorioService
 
             Auditoria::registrar(
                 'Actualizar', 'Alta', self::DOMINIO, 'RESULTADO_EXAMEN', $res->COD_RES,
-                "Resultado validado (orden {$codOrd})", $actor
+                "Resultado validado (orden {$codOrd})",
+                $actor,
+                codPac: $this->pacienteDeOrden($orden)
             );
         });
     }
@@ -217,7 +225,8 @@ class LaboratorioService
             Auditoria::registrar(
                 'Actualizar', $critico ? 'Crítica' : 'Alta', self::DOMINIO, 'RESULTADO_EXAMEN', $res->COD_RES,
                 "Resultado publicado (orden {$codOrd})" . ($critico ? ($notificado ? ', médico notificado' : ', médico sin usuario para notificar') : ''),
-                $actor
+                $actor,
+                codPac: $this->pacienteDeOrden($orden)
             );
 
             return $notificado;
@@ -242,6 +251,17 @@ class LaboratorioService
             throw new DomainException("La orden {$codOrd} todavía no tiene resultado cargado.");
         }
         return $res;
+    }
+
+    /** Paciente de la orden: ORDEN_EXAMEN -> CONSULTA -> HISTORIA_CLINICA. */
+    private function pacienteDeOrden(object $orden): ?string
+    {
+        $codPac = DB::table('CONSULTA as c')
+            ->join('HISTORIA_CLINICA as h', 'h.COD_HIS', '=', 'c.COD_HIS')
+            ->where('c.COD_CNS', $orden->COD_CNS)
+            ->value('h.COD_PAC');
+
+        return $codPac ?: null;
     }
 
     private function notificarMedico(object $orden): bool
