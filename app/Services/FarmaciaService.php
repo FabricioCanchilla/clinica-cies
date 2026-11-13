@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
  * - Despacho parcial: si no alcanza el stock se entrega lo que hay; la receta queda "Activa"
  *   hasta que todos los ítems estén completos y entonces pasa a "Completada".
  * - Despachos en DOM03 (clínico); entradas y bajas de lote en DOM04 (inventario/financiero).
+ * - Los despachos registran en AUDITORIA el paciente afectado (COD_PAC); las entradas y bajas
+ *   de lote no, porque no involucran a ningún paciente.
  */
 class FarmaciaService
 {
@@ -189,10 +191,14 @@ class FarmaciaService
 
             $quedan = $pendiente - $entregar;
 
+            // Paciente al que pertenece la receta (para la auditoría)
+            $codPac = $this->pacienteDeReceta($codRec);
+
             Auditoria::registrar(
                 'Actualizar', 'Media', self::DOM_CLINICO, 'DETALLE_RECETA', $codDre,
                 "Receta {$codRec}: {$nombre} x{$entregar} (lotes: " . implode(', ', $usados) . "). Pendiente del ítem: {$quedan}",
-                $actor
+                $actor,
+                codPac: $codPac
             );
 
             // ¿Todos los ítems completos? entonces la receta pasa a Completada
@@ -203,7 +209,9 @@ class FarmaciaService
                 DB::table('RECETA')->where('COD_REC', $codRec)->update(['EST_REC' => 'Completada']);
                 Auditoria::registrar(
                     'Actualizar', 'Media', self::DOM_CLINICO, 'RECETA', $codRec,
-                    'Estado: Activa -> Completada (todos los ítems entregados)', $actor
+                    'Estado: Activa -> Completada (todos los ítems entregados)',
+                    $actor,
+                    codPac: $codPac
                 );
             }
 
@@ -317,7 +325,7 @@ class FarmaciaService
         return DB::table('MEDICAMENTO')->orderBy('DES_MED')->get();
     }
 
-    /** Entrada de stock: cada entrada crea un lote nuevo (CANDIS = CANING). */
+    /** Entrada de stock: cada entrada crea un lote nuevo (CANDIS = CANING). Sin paciente afectado. */
     public function registrarEntrada(string $codMed, string $nroLot, string $fecVen, int $cantidad, object $actor): string
     {
         return DB::transaction(function () use ($codMed, $nroLot, $fecVen, $cantidad, $actor) {
@@ -359,7 +367,7 @@ class FarmaciaService
         });
     }
 
-    /** Baja de stock (merma, rotura o vencido) con motivo obligatorio. */
+    /** Baja de stock (merma, rotura o vencido) con motivo obligatorio. Sin paciente afectado. */
     public function darBaja(string $codLot, int $cantidad, string $motivo, object $actor): void
     {
         DB::transaction(function () use ($codLot, $cantidad, $motivo, $actor) {
@@ -386,5 +394,19 @@ class FarmaciaService
                 $actor
             );
         });
+    }
+
+    // ------------------------------------------------------------------
+
+    /** Paciente dueño de la receta: RECETA -> CONSULTA -> HISTORIA_CLINICA. */
+    private function pacienteDeReceta(string $codRec): ?string
+    {
+        $codPac = DB::table('RECETA as r')
+            ->join('CONSULTA as c', 'c.COD_CNS', '=', 'r.COD_CNS')
+            ->join('HISTORIA_CLINICA as h', 'h.COD_HIS', '=', 'c.COD_HIS')
+            ->where('r.COD_REC', $codRec)
+            ->value('h.COD_PAC');
+
+        return $codPac ?: null;
     }
 }
