@@ -11,6 +11,8 @@ use App\Http\Controllers\Admin\EmpleadoController;
 use App\Http\Controllers\Laboratorio\OrdenController as LabOrdenController;
 use App\Http\Controllers\Farmacia\RecetaController as FarmRecetaController;
 use App\Http\Controllers\Farmacia\LoteController as FarmLoteController;
+use App\Http\Controllers\Paciente\DashboardController as PacienteDashboardController;
+
 
 Route::get('/', fn () => redirect()->route('panel'));
 
@@ -131,12 +133,17 @@ foreach ($secciones as $slug => $titulo) {
         Route::get('/lotes/{codLot}/baja', [FarmLoteController::class, 'formBaja'])->name('lotes.baja');
         Route::post('/lotes/{codLot}/baja', [FarmLoteController::class, 'guardarBaja'])->name('lotes.baja.guardar');
     });
+
+// Panel exclusivo del paciente
+Route::middleware('rol:ROL006')
+    ->get('/paciente', [PacienteDashboardController::class, 'index'])
+    ->name('paciente.dashboard');
+
     // 4. Panel de los demás roles
     $otros = [
         'ROL002' => 'recepcion',
         'ROL004' => 'enfermeria',
         'ROL005' => 'caja',
-        'ROL006' => 'paciente',
     ];
 
     foreach ($otros as $codigo => $slug) {
