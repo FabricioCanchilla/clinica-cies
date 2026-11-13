@@ -3,20 +3,27 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\Auditoria;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Writer\XLSX\Writer;
 
 class AuditoriaController extends Controller
 {
     private const CRITICIDADES = ['Baja', 'Media', 'Alta', 'Crítica'];
 
+    // Tope de filas para el PDF (dompdf consume mucha memoria). El Excel no tiene tope.
+    private const LIMITE_PDF = 2000;
+
     public function index(Request $request)
     {
         [$query, $f, $dominios, $roles, $acciones] = $this->consulta($request);
 
-        $registros = $query
-            ->simplePaginate(20)
-            ->withQueryString();
+        $registros = $query->simplePaginate(20)->withQueryString();
 
         return view('admin.auditoria.index', [
             'registros' => $registros,
@@ -27,9 +34,94 @@ class AuditoriaController extends Controller
         ]);
     }
 
+    public function excel(Request $request)
+    {
+        [$query, $f, $dominios, $roles] = $this->consulta($request);
+
+        $this->auditarExportacion('Exportar Excel', $this->resumenFiltros($f, $dominios, $roles));
+
+        $nombre = 'auditoria_cies_' . now()->format('Ymd_His') . '.xlsx';
+        $ruta   = tempnam(sys_get_temp_dir(), 'aud_');
+
+        $writer = new Writer();
+        $writer->openToFile($ruta);
+
+        $writer->addRow(Row::fromValues([
+            'Código', 'Fecha', 'Usuario', 'Rol', 'Acción', 'Criticidad', 'Dominio',
+            'Entidad', 'Registro', 'Paciente', 'CI paciente', 'Detalle', 'IP', 'Dispositivo',
+        ]));
+
+        foreach ($query->cursor() as $r) {
+            $writer->addRow(Row::fromValues([
+                $r->COD_AUD,
+                \Carbon\Carbon::parse($r->FEC_AUD)->format('d/m/Y H:i:s'),
+                $r->USR_USR,
+                $r->DES_ROL,
+                $r->ACC_AUD,
+                $r->CRI_AUD,
+                $r->DES_DOM,
+                $r->ENT_AUD,
+                $r->REG_AUD,
+                $r->COD_PAC ? trim($r->NOM_PAC . ' ' . $r->APE_PAC) : '',
+                $r->CI_PAC ?? '',
+                $r->DET_AUD,
+                $r->IP_AUD,
+                $r->DIS_AUD,
+            ]));
+        }
+
+        $writer->close();
+
+        return response()->download($ruta, $nombre, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
+    }
+
+    public function pdf(Request $request)
+    {
+        [$query, $f, $dominios, $roles] = $this->consulta($request);
+
+        $resumen = $this->resumenFiltros($f, $dominios, $roles);
+        $this->auditarExportacion('Exportar PDF', $resumen);
+
+        $registros = $query->limit(self::LIMITE_PDF + 1)->get();
+        $truncado  = $registros->count() > self::LIMITE_PDF;
+        $registros = $registros->take(self::LIMITE_PDF);
+
+        $html = view('admin.auditoria.pdf', [
+            'registros'   => $registros,
+            'filtros'     => $resumen,
+            'truncado'    => $truncado,
+            'limite'      => self::LIMITE_PDF,
+            'generadoPor' => Auth::user()->USR_USR ?? '—',
+            'generadoEn'  => now()->format('d/m/Y H:i:s'),
+        ])->render();
+
+        $opciones = new Options();
+        $opciones->set('isRemoteEnabled', false);
+        $opciones->set('defaultFont', 'DejaVu Sans');
+
+        $dompdf = new Dompdf($opciones);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->render();
+
+        // Pie de página: "Página X de Y"
+        $canvas = $dompdf->getCanvas();
+        $fuente = $dompdf->getFontMetrics()->getFont('DejaVu Sans', 'normal');
+        $canvas->page_text(720, 570, 'Página {PAGE_NUM} de {PAGE_COUNT}', $fuente, 8, [0.4, 0.4, 0.4]);
+
+        $nombre = 'auditoria_cies_' . now()->format('Ymd_His') . '.pdf';
+
+        return response($dompdf->output(), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $nombre . '"',
+        ]);
+    }
+
     /**
-     * Consulta compartida por la pantalla y (luego) la exportación a Excel/PDF.
-     * Devuelve: [query, filtros ya saneados, dominios, roles, acciones].
+     * Consulta compartida por la pantalla, el Excel y el PDF.
+     * Devuelve: [query, filtros saneados, dominios, roles, acciones].
      */
     private function consulta(Request $request): array
     {
@@ -38,12 +130,10 @@ class AuditoriaController extends Controller
             'hasta' => 'nullable|date|after_or_equal:desde',
         ]);
 
-        // Catálogos para los desplegables (y para validar lo que llega por URL)
         $dominios = DB::table('DOMINIO_AUD')->orderBy('COD_DOM')->get(['COD_DOM', 'DES_DOM']);
         $roles    = DB::table('ROL')->orderBy('DES_ROL')->get(['COD_ROL', 'DES_ROL']);
         $acciones = DB::table('AUDITORIA')->distinct()->orderBy('ACC_AUD')->pluck('ACC_AUD');
 
-        // Filtros saneados: lo que no es válido se descarta (queda vacío)
         $criticidad = (string) $request->query('criticidad', '');
         $dominio    = (string) $request->query('dominio', '');
         $rol        = (string) $request->query('rol', '');
@@ -75,7 +165,6 @@ class AuditoriaController extends Controller
                 'PACIENTE.APE_PAC',
                 'PACIENTE.CI_PAC'
             )
-            // Texto libre: detalle, registro o código del evento
             ->when($f['buscar'] !== '', function ($q) use ($f) {
                 $q->where(function ($q) use ($f) {
                     $q->where('AUDITORIA.DET_AUD', 'like', "%{$f['buscar']}%")
@@ -83,9 +172,7 @@ class AuditoriaController extends Controller
                       ->orWhere('AUDITORIA.COD_AUD', 'like', "%{$f['buscar']}%");
                 });
             })
-            // Usuario que realizó la acción
             ->when($f['usuario'] !== '', fn ($q) => $q->where('USUARIO.USR_USR', 'like', "%{$f['usuario']}%"))
-            // Paciente/expediente afectado: nombre, apellido, CI, código o nro. de historia
             ->when($f['paciente'] !== '', function ($q) use ($f) {
                 $q->where(function ($q) use ($f) {
                     $q->where('PACIENTE.CI_PAC', 'like', "%{$f['paciente']}%")
@@ -109,5 +196,36 @@ class AuditoriaController extends Controller
             ->orderByDesc('AUDITORIA.id');
 
         return [$query, $f, $dominios, $roles, $acciones];
+    }
+
+    /** Lista legible de los filtros activos (para el PDF y para el detalle de auditoría). */
+    private function resumenFiltros(array $f, $dominios, $roles): array
+    {
+        $t = [];
+
+        if ($f['buscar'] !== '')     $t[] = 'Texto: ' . $f['buscar'];
+        if ($f['usuario'] !== '')    $t[] = 'Usuario: ' . $f['usuario'];
+        if ($f['paciente'] !== '')   $t[] = 'Paciente/expediente: ' . $f['paciente'];
+        if ($f['rol'] !== '')        $t[] = 'Rol: ' . $roles->firstWhere('COD_ROL', $f['rol'])->DES_ROL;
+        if ($f['accion'] !== '')     $t[] = 'Acción: ' . $f['accion'];
+        if ($f['criticidad'] !== '') $t[] = 'Criticidad: ' . $f['criticidad'];
+        if ($f['dominio'] !== '')    $t[] = 'Dominio: ' . $dominios->firstWhere('COD_DOM', $f['dominio'])->DES_DOM;
+        if ($f['desde'] !== '')      $t[] = 'Desde: ' . $f['desde'];
+        if ($f['hasta'] !== '')      $t[] = 'Hasta: ' . $f['hasta'];
+
+        return $t;
+    }
+
+    /** Exportar el log de auditoría también deja rastro en la auditoría. */
+    private function auditarExportacion(string $accion, array $resumen): void
+    {
+        Auditoria::registrar(
+            $accion,
+            'Media',
+            'DOM02',
+            'AUDITORIA',
+            'EXPORTACION',
+            'Filtros: ' . ($resumen ? implode(' | ', $resumen) : 'ninguno')
+        );
     }
 }

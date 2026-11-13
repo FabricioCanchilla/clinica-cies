@@ -54,6 +54,9 @@
         @if (collect($f)->filter(fn ($v) => $v !== '')->isNotEmpty())
             <a href="{{ route('admin.auditoria') }}" class="btn">Limpiar</a>
         @endif
+
+        <a href="{{ route('admin.auditoria.excel', request()->query()) }}" class="btn">Exportar Excel</a>
+        <a href="{{ route('admin.auditoria.pdf', request()->query()) }}" class="btn">Exportar PDF</a>
     </form>
 
     <div class="card" style="overflow-x: auto;">
