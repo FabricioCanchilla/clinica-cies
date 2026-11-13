@@ -307,6 +307,63 @@
 
 </section>
 
+<section class="informacion" style="margin-top: 30px;">
+
+    <h3>
+        <i class="fas fa-prescription"></i>
+        Mis recetas médicas
+    </h3>
+
+    @if ($recetas->isEmpty())
+
+        <p>
+            No tienes recetas médicas registradas.
+        </p>
+
+    @else
+
+        <div style="overflow-x: auto; margin-top: 20px;">
+
+            <table style="width: 100%; border-collapse: collapse;">
+
+                <thead>
+                    <tr style="background: #d1fae5; color: #065f46;">
+                        <th style="padding: 12px;">Fecha</th>
+                        <th style="padding: 12px;">Estado</th>
+                        <th style="padding: 12px;">Observaciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach ($recetas as $receta)
+
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+
+                            <td style="padding: 12px;">
+                                {{ $receta->FEC_REC }}
+                            </td>
+
+                            <td style="padding: 12px;">
+                                {{ $receta->EST_REC }}
+                            </td>
+
+                            <td style="padding: 12px;">
+                                {{ $receta->OBS_REC ?? 'Sin observaciones' }}
+                            </td>
+
+                        </tr>
+
+                    @endforeach
+                </tbody>
+
+            </table>
+
+        </div>
+
+    @endif
+
+</section>
+
 
 <section class="informacion">
 
