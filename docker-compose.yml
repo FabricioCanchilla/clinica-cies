@@ -34,8 +34,8 @@ services:
       DB_HOST: mysql
       DB_PORT: "3306"
       DB_DATABASE: clinica_cies
-      DB_USERNAME: root
-      DB_PASSWORD: root123
+      DB_USERNAME: cies_app
+      DB_PASSWORD: cies_app123
       COMPOSER_ALLOW_SUPERUSER: "1"
     ports:
       - "8001:8000"

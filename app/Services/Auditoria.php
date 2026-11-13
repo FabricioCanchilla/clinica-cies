@@ -9,6 +9,8 @@ class Auditoria
 {
     /**
      * Registra un evento. Si no se pasa $actor, se usa el usuario autenticado.
+     * $codPac es el paciente afectado por la acción (si aplica). Si no se pasa,
+     * se usa el COD_PAC del actor (caso en que el propio paciente actúa).
      */
     public static function registrar(
         string $accion,
@@ -17,7 +19,8 @@ class Auditoria
         string $entidad,
         string $registro,
         string $detalle,
-        ?object $actor = null
+        ?object $actor = null,
+        ?string $codPac = null
     ): void {
         $actor = $actor ?? Auth::user();
 
@@ -36,7 +39,7 @@ class Auditoria
             'COD_DOM' => $dominio,
             'COD_USR' => $actor->COD_USR,
             'COD_ROL' => $actor->COD_ROL,
-            'COD_PAC' => $actor->COD_PAC ?? null,
+            'COD_PAC' => $codPac ?? ($actor->COD_PAC ?? null),
         ]);
     }
 }
