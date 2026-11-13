@@ -111,11 +111,78 @@ Las cuentas que crea el administrador piden cambiar la contraseña en el primer 
 **Auditoría** (administrador y auditor)
 - Registro de las acciones en `AUDITORIA`, con dominios `DOM01` (usuarios), `DOM02` (seguridad),
   `DOM03` (clínico) y `DOM04` (financiero/inventario), y filtros por texto, criticidad y fechas.
+- Seguridad (`DOM02`): inicios de sesión, intentos fallidos, cierres de sesión, intentos sobre
+  cuentas bloqueadas y bloqueo automático (criticidad `Crítica`).
+
+## Auditoría: cómo registrar eventos (helper `Auditoria`)
+
+Todo evento importante se guarda en la tabla `AUDITORIA` con el helper `App\Services\Auditoria`.
+
+```php
+use App\Services\Auditoria;
+
+Auditoria::registrar(
+    string $accion,        // qué pasó, máx. 20 caracteres (ej. 'Actualizar', 'Login', 'Login fallido')
+    string $criticidad,    // 'Baja' | 'Media' | 'Alta' | 'Crítica'
+    string $dominio,       // 'DOM01' | 'DOM02' | 'DOM03' | 'DOM04'
+    string $entidad,       // tabla afectada, máx. 30 (ej. 'USUARIO')
+    string $registro,      // código del registro afectado, máx. 15 (ej. 'USR00005')
+    string $detalle,       // descripción legible, se corta a 255
+    ?object $actor = null  // quién lo hizo; si es null se usa Auth::user()
+);
+```
+
+**Qué completa solo el helper:** `COD_AUD` (correlativo `AUD00000001`), `FEC_AUD`, `IP_AUD`,
+`DIS_AUD` (navegador, cortado a 60), `COD_USR` y `COD_ROL` del actor, y `COD_PAC` si el actor lo
+tiene (`$actor->COD_PAC`). El helper **no** recibe el paciente afectado (pendiente de mejora).
+
+**Dominios**
+
+| Código | Dominio | Se usa para |
+|--------|---------|-------------|
+| DOM01 | Usuarios | Crear, editar, bloquear/desbloquear usuarios |
+| DOM02 | Seguridad | Login, intentos fallidos, logout, bloqueos |
+| DOM03 | Clínico | Laboratorio y despachos de Farmacia |
+| DOM04 | Financiero | Inventario: entradas y bajas de lote |
+
+**Criticidades**
+
+| Criticidad | Cuándo usarla | Ejemplo |
+|------------|---------------|---------|
+| Baja | Acción de rutina | Login correcto, logout |
+| Media | Algo que conviene revisar | Contraseña incorrecta, intento sobre cuenta bloqueada |
+| Alta | Cambio importante | Cambio de rol, baja de lote |
+| Crítica | Seguridad grave | Bloqueo automático por intentos fallidos |
+
+**Ejemplo de uso**
+
+```php
+// Dentro de un servicio o controlador con usuario autenticado
+Auditoria::registrar(
+    'Actualizar', 'Alta', 'DOM01', 'USUARIO', $usuario->COD_USR,
+    "Cambio de rol de {$usuario->USR_USR} a {$nuevoRol}"
+);
+
+// Cuando todavía no hay sesión (ej. login fallido): pasar el actor a mano
+Auditoria::registrar(
+    'Login fallido', 'Media', 'DOM02', 'USUARIO', $user->COD_USR,
+    "Contraseña incorrecta para {$user->USR_USR}",
+    $user
+);
+```
+
+**Reglas**
+
+- `COD_USR` es obligatorio (FK a `USUARIO`), por eso un login con un usuario que no existe no se
+  puede guardar en `AUDITORIA`; ese caso solo va a `storage/logs`.
+- En el logout, auditar **antes** de `Auth::logout()`; después `Auth::user()` ya es `null`.
+- Nunca poner contraseñas ni datos sensibles en `$detalle`.
+- Los textos con tilde (`'Crítica'`) deben guardarse en UTF-8.
 
 ## Pendiente
 
-- Auditoría: inicios de sesión, intentos fallidos y cierre de sesión (DOM02), filtro por dominio, exportar,
-  y usuario de BD con solo `INSERT`/`SELECT` sobre `AUDITORIA` (hoy la app usa `root`).
+- Auditoría: filtro por dominio, exportar, y usuario de BD con solo `INSERT`/`SELECT`
+  sobre `AUDITORIA` (hoy la app usa `root`).
 - Microservicio Quarkus: verificación OTP.
 - Farmacia: venta en mostrador con comprobante (RF041).
 - Pantallas aún en construcción: recepción, enfermería, caja, paciente, citas e internación.
