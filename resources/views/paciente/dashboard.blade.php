@@ -365,6 +365,61 @@
 </section>
 
 
+<section class="informacion" style="margin-top: 30px;">
+
+    <h3>
+        <i class="fas fa-file-medical"></i>
+        Mi historial médico
+    </h3>
+
+    @if ($historial->isEmpty())
+
+        <p>No tienes consultas médicas registradas.</p>
+
+    @else
+
+        <div style="overflow-x: auto; margin-top: 20px;">
+
+            <table style="width: 100%; border-collapse: collapse;">
+
+                <thead>
+                    <tr style="background: #d1fae5; color: #065f46;">
+                        <th style="padding: 12px;">Fecha</th>
+                        <th style="padding: 12px;">Diagnóstico</th>
+                        <th style="padding: 12px;">Tratamiento</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach ($historial as $consulta)
+
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+
+                            <td style="padding: 12px;">
+                                {{ $consulta->FEC_CNS }}
+                            </td>
+
+                            <td style="padding: 12px;">
+                                {{ $consulta->DIA_CNS ?? 'No registrado' }}
+                            </td>
+
+                            <td style="padding: 12px;">
+                                {{ $consulta->PLA_CNS ?? 'No registrado' }}
+                            </td>
+
+                        </tr>
+
+                    @endforeach
+                </tbody>
+
+            </table>
+
+        </div>
+
+    @endif
+
+</section>
+
 <section class="informacion">
 
     <h3>

@@ -47,10 +47,29 @@ if ($paciente) {
         ->get();
 }
 
+
+$historial = collect();
+
+if ($paciente) {
+    $historial = DB::table('CONSULTA as co')
+        ->join('HISTORIA_CLINICA as h',
+            'co.COD_HIS', '=', 'h.COD_HIS')
+        ->where('h.COD_PAC', $paciente->COD_PAC)
+        ->select(
+            'co.FEC_CNS',
+            'co.DIA_CNS',
+            'co.PLA_CNS'
+        )
+        ->orderBy('co.FEC_CNS', 'desc')
+        ->get();
+}
+
+
       return view('paciente.dashboard', [
     'paciente' => $paciente,
     'citas' => $citas,
-    'recetas' => $recetas
+    'recetas' => $recetas,
+    'historial' => $historial 
 ]);
 }
 }
