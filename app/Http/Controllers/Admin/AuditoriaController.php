@@ -17,8 +17,14 @@ class AuditoriaController extends Controller
 
         $buscar     = trim($request->query('buscar', ''));
         $criticidad = $request->query('criticidad', '');
+        $dominio    = $request->query('dominio', '');
         $desde      = $request->query('desde', '');
         $hasta      = $request->query('hasta', '');
+
+        // Lista de dominios para el desplegable (y para validar el filtro)
+        $dominios = DB::table('DOMINIO_AUD')
+            ->orderBy('COD_DOM')
+            ->get(['COD_DOM', 'DES_DOM']);
 
         $registros = DB::table('AUDITORIA')
             ->join('USUARIO', 'AUDITORIA.COD_USR', '=', 'USUARIO.COD_USR')
@@ -37,12 +43,18 @@ class AuditoriaController extends Controller
                 in_array($criticidad, ['Baja', 'Media', 'Alta', 'Crítica'], true),
                 fn ($q) => $q->where('AUDITORIA.CRI_AUD', $criticidad)
             )
+            ->when(
+                $dominio !== '' && $dominios->contains('COD_DOM', $dominio),
+                fn ($q) => $q->where('AUDITORIA.COD_DOM', $dominio)
+            )
             ->when($desde !== '', fn ($q) => $q->where('AUDITORIA.FEC_AUD', '>=', $desde . ' 00:00:00'))
             ->when($hasta !== '', fn ($q) => $q->where('AUDITORIA.FEC_AUD', '<=', $hasta . ' 23:59:59'))
             ->orderByDesc('AUDITORIA.id')
             ->simplePaginate(20)
             ->withQueryString();
 
-        return view('admin.auditoria.index', compact('registros', 'buscar', 'criticidad', 'desde', 'hasta'));
+        return view('admin.auditoria.index', compact(
+            'registros', 'dominios', 'buscar', 'criticidad', 'dominio', 'desde', 'hasta'
+        ));
     }
 }

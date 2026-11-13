@@ -14,10 +14,16 @@
                 <option value="{{ $c }}" @selected($criticidad === $c)>{{ $c }}</option>
             @endforeach
         </select>
+        <select name="dominio">
+            <option value="">Todo dominio</option>
+            @foreach ($dominios as $d)
+                <option value="{{ $d->COD_DOM }}" @selected($dominio === $d->COD_DOM)>{{ $d->DES_DOM }}</option>
+            @endforeach
+        </select>
         <input type="date" name="desde" value="{{ $desde }}" title="Desde">
         <input type="date" name="hasta" value="{{ $hasta }}" title="Hasta">
         <button type="submit" class="btn">Filtrar</button>
-        @if ($buscar !== '' || $criticidad !== '' || $desde !== '' || $hasta !== '')
+        @if ($buscar !== '' || $criticidad !== '' || $dominio !== '' || $desde !== '' || $hasta !== '')
             <a href="{{ route('admin.auditoria') }}" class="btn">Limpiar</a>
         @endif
     </form>
@@ -40,7 +46,7 @@
             <tbody>
                 @forelse ($registros as $r)
                     @php
-                                               $claseCri = match ($r->CRI_AUD) {
+                        $claseCri = match ($r->CRI_AUD) {
                             'Alta', 'Crítica' => 'bloqueado',
                             'Media'           => 'media',
                             default           => 'activo',
