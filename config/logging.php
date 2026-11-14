@@ -57,6 +57,13 @@ return [
             'channels' => explode(',', (string) env('LOG_STACK', 'single')),
             'ignore_exceptions' => false,
         ],
+        'cies' => [
+            'driver' => 'daily',
+            'path' => base_path('logs/cies_laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
 
         'single' => [
             'driver' => 'single',
