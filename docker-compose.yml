@@ -37,11 +37,44 @@ services:
       DB_USERNAME: cies_app
       DB_PASSWORD: cies_app123
       COMPOSER_ALLOW_SUPERUSER: "1"
+      QUARKUS_URL: http://quarkus:8080
+      QUARKUS_API_KEY: cies-dev-key-cambiar
     ports:
       - "8001:8000"
     volumes:
       - .:/var/www/html
       - vendor_data:/var/www/html/vendor
+
+  quarkus:
+    build: ./cies-quarkus
+    container_name: clinica_cies_quarkus
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    environment:
+      CIES_DB_URL: jdbc:mysql://mysql:3306/clinica_cies?useUnicode=true&characterEncoding=utf8&serverTimezone=America/La_Paz
+      CIES_DB_USER: cies_quarkus
+      CIES_DB_PASS: cies_quarkus123
+      CIES_SMTP_HOST: mailpit
+      CIES_SMTP_PORT: "1025"
+      CIES_MAIL_FROM: no-reply@cies.local
+      CIES_API_KEY: cies-dev-key-cambiar
+      CIES_LOG_DIR: /app/logs
+    ports:
+      - "8082:8080"   # solo para pruebas locales y para Laravel con PHP local
+    volumes:
+      - ./logs:/app/logs
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: clinica_cies_mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"   # bandeja web
+      - "1025:1025"   # SMTP
 
   phpmyadmin:
     image: phpmyadmin:latest
