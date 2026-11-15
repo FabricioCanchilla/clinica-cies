@@ -1,12 +1,18 @@
 <?php
+
 namespace App\Http\Controllers\Paciente;
 
 use App\Http\Controllers\Controller;
+use App\Services\CitaService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function __construct(private CitaService $citas)
+    {
+    }
+
     public function index(): View
     {
         $usuario = auth()->user();
@@ -19,57 +25,50 @@ class DashboardController extends Controller
                 ->first();
         }
 
+        // Las citas salen de CitaService: traen médico, servicio y el vencimiento del bloqueo
+        $citas = collect();
 
-$citas = collect();
+        if ($paciente) {
+            $citas = $this->citas->citasDelPaciente($paciente->COD_PAC);
+        }
 
-if ($paciente) {
-    $citas = DB::table('CITA')
-        ->where('COD_PAC', $paciente->COD_PAC)
-        ->orderBy('FEC_CIT', 'desc')
-        ->orderBy('HOR_CIT', 'desc')
-        ->get();
-}
+        $recetas = collect();
 
-$recetas = collect();
+        if ($paciente) {
+            $recetas = DB::table('RECETA as r')
+                ->join('CONSULTA as co', 'r.COD_CNS', '=', 'co.COD_CNS')
+                ->join('CITA as ci', 'co.COD_CIT', '=', 'ci.COD_CIT')
+                ->where('ci.COD_PAC', $paciente->COD_PAC)
+                ->select(
+                    'r.COD_REC',
+                    'r.FEC_REC',
+                    'r.EST_REC',
+                    'r.OBS_REC'
+                )
+                ->orderBy('r.FEC_REC', 'desc')
+                ->get();
+        }
 
-if ($paciente) {
-    $recetas = DB::table('RECETA as r')
-        ->join('CONSULTA as co', 'r.COD_CNS', '=', 'co.COD_CNS')
-        ->join('CITA as ci', 'co.COD_CIT', '=', 'ci.COD_CIT')
-        ->where('ci.COD_PAC', $paciente->COD_PAC)
-        ->select(
-            'r.COD_REC',
-            'r.FEC_REC',
-            'r.EST_REC',
-            'r.OBS_REC'
-        )
-        ->orderBy('r.FEC_REC', 'desc')
-        ->get();
-}
+        $historial = collect();
 
+        if ($paciente) {
+            $historial = DB::table('CONSULTA as co')
+                ->join('HISTORIA_CLINICA as h', 'co.COD_HIS', '=', 'h.COD_HIS')
+                ->where('h.COD_PAC', $paciente->COD_PAC)
+                ->select(
+                    'co.FEC_CNS',
+                    'co.DIA_CNS',
+                    'co.PLA_CNS'
+                )
+                ->orderBy('co.FEC_CNS', 'desc')
+                ->get();
+        }
 
-$historial = collect();
-
-if ($paciente) {
-    $historial = DB::table('CONSULTA as co')
-        ->join('HISTORIA_CLINICA as h',
-            'co.COD_HIS', '=', 'h.COD_HIS')
-        ->where('h.COD_PAC', $paciente->COD_PAC)
-        ->select(
-            'co.FEC_CNS',
-            'co.DIA_CNS',
-            'co.PLA_CNS'
-        )
-        ->orderBy('co.FEC_CNS', 'desc')
-        ->get();
-}
-
-
-      return view('paciente.dashboard', [
-    'paciente' => $paciente,
-    'citas' => $citas,
-    'recetas' => $recetas,
-    'historial' => $historial 
-]);
-}
+        return view('paciente.dashboard', [
+            'paciente'  => $paciente,
+            'citas'     => $citas,
+            'recetas'   => $recetas,
+            'historial' => $historial,
+        ]);
+    }
 }

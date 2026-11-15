@@ -181,6 +181,21 @@
 
     <main class="contenedor">
 
+        @if (session('ok'))
+            <div style="margin-bottom: 25px; padding: 16px; border-radius: 12px; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0;">
+                <i class="fas fa-circle-check"></i>
+                {{ session('ok') }}
+            </div>
+        @endif
+
+        @if ($errors->any())
+            <div style="margin-bottom: 25px; padding: 16px; border-radius: 12px; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca;">
+                <i class="fas fa-circle-exclamation"></i>
+                {{ $errors->first() }}
+            </div>
+        @endif
+
+
         <section class="bienvenida">
             <h1>
                 ¡Bienvenido, {{ auth()->user()->USR_USR }}!
@@ -251,21 +266,19 @@
         Mis citas médicas
     </h3>
 
-
-<div style="margin: 15px 0;">
-    <a href="{{ route('paciente.citas.crear') }}"
-       style="display: inline-block;
-              background: #059669;
-              color: white;
-              padding: 10px 18px;
-              border-radius: 8px;
-              text-decoration: none;
-              font-weight: 600;">
-        <i class="fas fa-calendar-plus"></i>
-        Agendar nueva cita
-    </a>
-</div>
-
+    <div style="margin: 15px 0;">
+        <a href="{{ route('paciente.citas.crear') }}"
+           style="display: inline-block;
+                  background: #059669;
+                  color: white;
+                  padding: 10px 18px;
+                  border-radius: 8px;
+                  text-decoration: none;
+                  font-weight: 600;">
+            <i class="fas fa-calendar-plus"></i>
+            Agendar nueva cita
+        </a>
+    </div>
 
     @if ($citas->isEmpty())
 
@@ -281,10 +294,12 @@
 
                 <thead>
                     <tr style="background: #d1fae5; color: #065f46;">
-                        <th style="padding: 12px;">Fecha</th>
-                        <th style="padding: 12px;">Hora</th>
-                        <th style="padding: 12px;">Estado</th>
-                        <th style="padding: 12px;">Motivo</th>
+                        <th style="padding: 12px; text-align: left;">Fecha</th>
+                        <th style="padding: 12px; text-align: left;">Hora</th>
+                        <th style="padding: 12px; text-align: left;">Médico</th>
+                        <th style="padding: 12px; text-align: left;">Servicio</th>
+                        <th style="padding: 12px; text-align: left;">Estado</th>
+                        <th style="padding: 12px; text-align: left;">Motivo</th>
                     </tr>
                 </thead>
 
@@ -294,15 +309,60 @@
                         <tr style="border-bottom: 1px solid #e2e8f0;">
 
                             <td style="padding: 12px;">
-                                {{ $cita->FEC_CIT }}
+                                {{ \Carbon\Carbon::parse($cita->FEC_CIT)->format('d/m/Y') }}
                             </td>
 
                             <td style="padding: 12px;">
-                                {{ $cita->HOR_CIT }}
+                                {{ substr($cita->HOR_CIT, 0, 5) }}
                             </td>
 
                             <td style="padding: 12px;">
-                                {{ $cita->EST_CIT }}
+                                {{ $cita->TIT_EMP }} {{ $cita->NOM_EMP }} {{ $cita->APE_EMP }}
+                            </td>
+
+                            <td style="padding: 12px;">
+                                {{ $cita->NOM_SRV }}
+                            </td>
+
+                            <td style="padding: 12px;">
+                                @php
+                                    $colores = [
+                                        'Confirmada'        => ['#d1fae5', '#065f46'],
+                                        'Pendiente de pago' => ['#fef3c7', '#92400e'],
+                                        'Atendida'          => ['#dbeafe', '#1e40af'],
+                                        'Expirada'          => ['#fee2e2', '#991b1b'],
+                                        'Cancelada'         => ['#fee2e2', '#991b1b'],
+                                        'No asistio'        => ['#f1f5f9', '#475569'],
+                                    ];
+                                    [$fondo, $letra] = $colores[$cita->EST_CIT] ?? ['#f1f5f9', '#475569'];
+                                @endphp
+
+                                <span style="background: {{ $fondo }};
+                                             color: {{ $letra }};
+                                             padding: 4px 10px;
+                                             border-radius: 999px;
+                                             font-size: 13px;
+                                             font-weight: 600;
+                                             white-space: nowrap;">
+                                    {{ $cita->EST_CIT }}
+                                </span>
+
+                                @if ($cita->EST_CIT === 'Pendiente de pago' && $cita->FECEXP_CIT && \Carbon\Carbon::parse($cita->FECEXP_CIT)->isFuture())
+                                    <a href="{{ route('paciente.citas.pagar', $cita->COD_CIT) }}"
+                                       style="display: inline-block;
+                                              margin-left: 8px;
+                                              background: #059669;
+                                              color: white;
+                                              padding: 5px 12px;
+                                              border-radius: 999px;
+                                              text-decoration: none;
+                                              font-size: 13px;
+                                              font-weight: 600;
+                                              white-space: nowrap;">
+                                        <i class="fas fa-lock"></i>
+                                        Pagar anticipo
+                                    </a>
+                                @endif
                             </td>
 
                             <td style="padding: 12px;">
