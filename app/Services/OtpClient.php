@@ -97,4 +97,15 @@ class OtpClient
         }
         return $defecto;
     }
+        /** Mensaje para el usuario a partir de la respuesta de validar(). */
+    public static function mensajeMotivo(array $res): string
+    {
+        return match ($res['motivo'] ?? '') {
+            'CODIGO_INCORRECTO' => 'Código incorrecto. Te quedan ' . ($res['intentosRestantes'] ?? 0) . ' intento(s).',
+            'BLOQUEADO'         => 'Superaste los 3 intentos. Solicita un código nuevo.',
+            'EXPIRADO'          => 'El código venció (dura 5 minutos). Solicita uno nuevo.',
+            'YA_USADO'          => 'Ese código ya fue utilizado. Solicita uno nuevo.',
+            default             => 'Código no válido. Solicita uno nuevo.',
+        };
+    }
 }
