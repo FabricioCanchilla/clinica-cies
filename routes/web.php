@@ -134,15 +134,20 @@ foreach ($secciones as $slug => $titulo) {
         Route::post('/lotes/{codLot}/baja', [FarmLoteController::class, 'guardarBaja'])->name('lotes.baja.guardar');
     });
 
-// Panel exclusivo del paciente
-Route::middleware('rol:ROL006')
-    ->get('/paciente', [PacienteDashboardController::class, 'index'])
-    ->name('paciente.dashboard');
+    // Panel del paciente (ROL006): sus datos, sus citas, agendamiento y pago con OTP
+    Route::middleware('rol:ROL006')->prefix('paciente')->name('paciente.')->group(function () {
+        Route::get('/', [PacienteDashboardController::class, 'index'])->name('dashboard');
 
-// Formulario de agendamiento del paciente
-Route::middleware('rol:ROL006')
-    ->get('/paciente/citas/crear', [PacienteCitaController::class, 'create'])
-    ->name('paciente.citas.crear');
+        // RF007: agendar
+        Route::get('/citas/crear', [PacienteCitaController::class, 'create'])->name('citas.crear');
+        Route::get('/citas/horarios', [PacienteCitaController::class, 'horarios'])->name('citas.horarios');
+        Route::post('/citas', [PacienteCitaController::class, 'store'])->name('citas.guardar');
+
+        // RF008: pagar el anticipo con OTP
+        Route::get('/citas/{codCit}/pagar', [PacienteCitaController::class, 'pagar'])->name('citas.pagar');
+        Route::post('/citas/{codCit}/otp', [PacienteCitaController::class, 'enviarOtp'])->name('citas.otp');
+        Route::post('/citas/{codCit}/pagar', [PacienteCitaController::class, 'confirmar'])->name('citas.confirmar');
+    });
 
     // 4. Panel de los demás roles
     $otros = [
