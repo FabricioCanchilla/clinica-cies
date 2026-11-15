@@ -63,6 +63,7 @@ services:
       CIES_MAIL_FROM: no-reply@cies.local
       CIES_API_KEY: cies-dev-key-cambiar
       CIES_LOG_DIR: /app/logs
+      CIES_OTP_SECRET: cambiar-secreto-otp
     ports:
       - "8082:8080"   # solo para pruebas locales y para Laravel con PHP local
     volumes:

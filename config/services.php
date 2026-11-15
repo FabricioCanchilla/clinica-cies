@@ -34,5 +34,10 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'quarkus' => [
+    'url'     => env('QUARKUS_URL', 'http://localhost:8082'),
+    'api_key' => env('QUARKUS_API_KEY', 'cies-dev-key-cambiar'),
+    'timeout' => 5,
+],
 
 ];
