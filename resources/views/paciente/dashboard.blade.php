@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -251,6 +250,22 @@
         <i class="fas fa-calendar-check"></i>
         Mis citas médicas
     </h3>
+
+
+<div style="margin: 15px 0;">
+    <a href="{{ route('paciente.citas.crear') }}"
+       style="display: inline-block;
+              background: #059669;
+              color: white;
+              padding: 10px 18px;
+              border-radius: 8px;
+              text-decoration: none;
+              font-weight: 600;">
+        <i class="fas fa-calendar-plus"></i>
+        Agendar nueva cita
+    </a>
+</div>
+
 
     @if ($citas->isEmpty())
 
