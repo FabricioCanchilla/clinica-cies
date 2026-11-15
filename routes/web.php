@@ -12,7 +12,7 @@ use App\Http\Controllers\Laboratorio\OrdenController as LabOrdenController;
 use App\Http\Controllers\Farmacia\RecetaController as FarmRecetaController;
 use App\Http\Controllers\Farmacia\LoteController as FarmLoteController;
 use App\Http\Controllers\Paciente\DashboardController as PacienteDashboardController;
-
+use App\Http\Controllers\Paciente\CitaController as PacienteCitaController;
 
 Route::get('/', fn () => redirect()->route('panel'));
 
@@ -138,6 +138,11 @@ foreach ($secciones as $slug => $titulo) {
 Route::middleware('rol:ROL006')
     ->get('/paciente', [PacienteDashboardController::class, 'index'])
     ->name('paciente.dashboard');
+
+// Formulario de agendamiento del paciente
+Route::middleware('rol:ROL006')
+    ->get('/paciente/citas/crear', [PacienteCitaController::class, 'create'])
+    ->name('paciente.citas.crear');
 
     // 4. Panel de los demás roles
     $otros = [
