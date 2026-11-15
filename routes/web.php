@@ -11,6 +11,8 @@ use App\Http\Controllers\Admin\EmpleadoController;
 use App\Http\Controllers\Laboratorio\OrdenController as LabOrdenController;
 use App\Http\Controllers\Farmacia\RecetaController as FarmRecetaController;
 use App\Http\Controllers\Farmacia\LoteController as FarmLoteController;
+use App\Http\Controllers\Paciente\DashboardController as PacienteDashboardController;
+use App\Http\Controllers\Paciente\CitaController as PacienteCitaController;
 
 Route::get('/', fn () => redirect()->route('panel'));
 
@@ -131,12 +133,27 @@ foreach ($secciones as $slug => $titulo) {
         Route::get('/lotes/{codLot}/baja', [FarmLoteController::class, 'formBaja'])->name('lotes.baja');
         Route::post('/lotes/{codLot}/baja', [FarmLoteController::class, 'guardarBaja'])->name('lotes.baja.guardar');
     });
+
+    // Panel del paciente (ROL006): sus datos, sus citas, agendamiento y pago con OTP
+    Route::middleware('rol:ROL006')->prefix('paciente')->name('paciente.')->group(function () {
+        Route::get('/', [PacienteDashboardController::class, 'index'])->name('dashboard');
+
+        // RF007: agendar
+        Route::get('/citas/crear', [PacienteCitaController::class, 'create'])->name('citas.crear');
+        Route::get('/citas/horarios', [PacienteCitaController::class, 'horarios'])->name('citas.horarios');
+        Route::post('/citas', [PacienteCitaController::class, 'store'])->name('citas.guardar');
+
+        // RF008: pagar el anticipo con OTP
+        Route::get('/citas/{codCit}/pagar', [PacienteCitaController::class, 'pagar'])->name('citas.pagar');
+        Route::post('/citas/{codCit}/otp', [PacienteCitaController::class, 'enviarOtp'])->name('citas.otp');
+        Route::post('/citas/{codCit}/pagar', [PacienteCitaController::class, 'confirmar'])->name('citas.confirmar');
+    });
+
     // 4. Panel de los demás roles
     $otros = [
         'ROL002' => 'recepcion',
         'ROL004' => 'enfermeria',
         'ROL005' => 'caja',
-        'ROL006' => 'paciente',
     ];
 
     foreach ($otros as $codigo => $slug) {

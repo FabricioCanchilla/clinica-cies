@@ -193,7 +193,7 @@ class CitaService
             ->join('SERVICIO as s', 's.COD_SRV', '=', 'c.COD_SRV')
             ->where('c.COD_PAC', $codPac)
             ->orderByDesc('c.FEC_CIT')->orderByDesc('c.HOR_CIT')
-            ->get(['c.COD_CIT', 'c.FEC_CIT', 'c.HOR_CIT', 'c.EST_CIT', 'c.FECEXP_CIT',
+            ->get(['c.COD_CIT', 'c.FEC_CIT', 'c.HOR_CIT', 'c.EST_CIT', 'c.MOT_CIT', 'c.FECEXP_CIT',
                    'e.TIT_EMP', 'e.NOM_EMP', 'e.APE_EMP', 's.NOM_SRV']);
     }
 
