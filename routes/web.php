@@ -14,6 +14,7 @@ use App\Http\Controllers\Farmacia\LoteController as FarmLoteController;
 use App\Http\Controllers\Paciente\DashboardController as PacienteDashboardController;
 use App\Http\Controllers\Paciente\CitaController as PacienteCitaController;
 use App\Http\Controllers\Caja\CajaController;
+use App\Http\Controllers\Enfermeria\InsumoController;
 
 Route::get('/', fn () => redirect()->route('panel'));
 
@@ -152,6 +153,21 @@ foreach ($secciones as $slug => $titulo) {
         // Fase 5: comprobante del anticipo (Quarkus) y reintento si falló después del pago
         Route::post('/citas/{codCit}/comprobante', [PacienteCitaController::class, 'reintentarComprobante'])->name('citas.comprobante.reintentar');
         Route::get('/citas/{codCit}/comprobante', [PacienteCitaController::class, 'comprobantePdf'])->name('citas.comprobante');
+        // RF016: comprobantes de los insumos que entregaron sus familiares
+        Route::get('/insumos/{nroCen}/comprobante', [PacienteCitaController::class, 'comprobanteInsumoPdf'])->name('insumos.comprobante');
+    });
+
+    // Panel de Enfermería (ROL004): RF031 recepción de insumos y RF032 firma + OTP + comprobante (RN36)
+    Route::middleware('rol:ROL004')->prefix('enfermeria')->name('enfermeria.')->group(function () {
+        Route::get('/', [InsumoController::class, 'index'])->name('dashboard');
+        Route::get('/insumos/crear', [InsumoController::class, 'create'])->name('insumos.crear');
+        Route::post('/insumos', [InsumoController::class, 'store'])->name('insumos.guardar');
+        Route::get('/insumos/{codIns}/verificar', [InsumoController::class, 'verificarForm'])->name('insumos.verificar');
+        Route::post('/insumos/{codIns}/otp', [InsumoController::class, 'enviarOtp'])->name('insumos.otp');
+        Route::post('/insumos/{codIns}/verificar', [InsumoController::class, 'verificar'])->name('insumos.verificar.guardar');
+        Route::post('/insumos/{codIns}/comprobante', [InsumoController::class, 'reintentar'])->name('insumos.comprobante');
+        Route::get('/insumos/{codIns}/firma', [InsumoController::class, 'firma'])->name('insumos.firma');
+        Route::get('/comprobantes/{nroCen}/pdf', [InsumoController::class, 'pdf'])->name('insumos.pdf');
     });
 
     // Panel de Caja (ROL005), RF039: apertura, cobros, anulación y cierre
@@ -169,7 +185,6 @@ foreach ($secciones as $slug => $titulo) {
     // 4. Panel de los demás roles
     $otros = [
         'ROL002' => 'recepcion',
-        'ROL004' => 'enfermeria',
     ];
 
     foreach ($otros as $codigo => $slug) {

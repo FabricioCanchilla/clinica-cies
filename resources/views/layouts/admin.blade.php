@@ -298,6 +298,13 @@
                     <a href="{{ route('farmacia.lotes') }}" class="{{ request()->routeIs('farmacia.lotes*') ? 'activo' : '' }}">
                     <i class="fas fa-boxes-stacked"></i> Lotes y stock
                 </a>
+            @elseif (auth()->user()->COD_ROL === 'ROL004')
+                <a href="{{ route('enfermeria.dashboard') }}" class="{{ request()->routeIs('enfermeria.dashboard') ? 'activo' : '' }}">
+                    <i class="fas fa-hand-holding-medical"></i> Insumos de familiares
+                </a>
+                <a href="{{ route('enfermeria.insumos.crear') }}" class="{{ request()->routeIs('enfermeria.insumos.crear') ? 'activo' : '' }}">
+                    <i class="fas fa-plus"></i> Registrar insumo
+                </a>
             @elseif (auth()->user()->COD_ROL === 'ROL005')
                 <a href="{{ route('caja.dashboard') }}" class="activo">
                     <i class="fas fa-cash-register"></i> Caja

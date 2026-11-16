@@ -177,7 +177,7 @@ class ComprobanteService
     private function auditarFallo(string $codPag, string $contexto, DomainException $e, ?string $codPac): void
     {
         Log::channel('cies')->warning("Comprobante no emitido para el pago {$codPag}: {$e->getMessage()}");
-        Auditoria::registrar('Comprobante no emitido', 'Alta', 'DOM04', 'PAGO', $codPag,
+        Auditoria::registrar('Comprobante fallido', 'Alta', 'DOM04', 'PAGO', $codPag,
             "{$contexto}: {$e->getMessage()} El pago sigue confirmado; queda pendiente de reintento.",
             codPac: $codPac);
     }

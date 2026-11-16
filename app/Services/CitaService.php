@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Firma;
 
 use Carbon\Carbon;
 use DomainException;
@@ -256,13 +257,16 @@ class CitaService
 
     // ---------- RF008: confirmar pago con el OTP ----------
 
-    public function confirmarPago(string $codCit, string $codPac, string $codUsr, string $codOtp, string $codigo, string $codMet): object
+    public function confirmarPago(string $codCit, string $codPac, string $codUsr, string $codOtp, string $codigo, string $codMet, string $firma): object
     {
         $cita = $this->citaParaPago($codCit, $codPac);
 
         if (!DB::table('METODO_PAGO')->where('COD_MET', $codMet)->exists()) {
             throw new DomainException('Selecciona un método de pago válido.');
         }
+
+        // RN16: dos capas. La firma se revisa antes del OTP para no gastar el código si falta la firma
+        $png = Firma::decodificar($firma, 'el paciente');
 
         // La validación va fuera de la transacción: no se mantienen bloqueos durante la llamada HTTP
         $res = $this->otp->validar($codOtp, trim($codigo));
@@ -272,7 +276,10 @@ class CitaService
             throw new DomainException(OtpClient::mensajeMotivo($res));
         }
 
-        $pago = DB::transaction(function () use ($cita, $codCit, $codPac, $codUsr, $codOtp, $codMet) {
+        // RN15: imagen en almacenamiento privado; en PAGO.FIR_PAG (AJ02) solo va la ruta
+        $rutaFirma = Firma::guardar($png, "firmas/pagos/{$codCit}-{$codOtp}.png");
+
+        $pago = DB::transaction(function () use ($cita, $codCit, $codPac, $codUsr, $codOtp, $codMet, $rutaFirma) {
             $c = DB::table('CITA')->where('COD_CIT', $codCit)->where('COD_PAC', $codPac)
                 ->lockForUpdate()->first();
             if (!$c || $c->EST_CIT !== 'Pendiente de pago') {
@@ -301,6 +308,7 @@ class CitaService
                 'COD_MET' => $codMet,
                 'COD_OTP' => $codOtp,
                 'COD_CAJ' => null,
+                'FIR_PAG' => $rutaFirma,
             ]);
 
             DB::table('CITA')->where('COD_CIT', $codCit)->update([
@@ -321,7 +329,7 @@ class CitaService
             ]);
 
             Auditoria::registrar('Confirmar pago', 'Media', 'DOM04', 'PAGO', $codPag,
-                "Anticipo Bs {$cita->anticipo} de la cita {$codCit} confirmado con OTP {$codOtp}", codPac: $codPac);
+                "Anticipo Bs {$cita->anticipo} de la cita {$codCit} confirmado con firma ({$rutaFirma}) y OTP {$codOtp}", codPac: $codPac);
 
             return (object) ['COD_PAG' => $codPag, 'monto' => $cita->anticipo, 'COD_CIT' => $codCit];
         });

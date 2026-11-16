@@ -48,10 +48,43 @@ class ComprobanteClient
         throw new DomainException($this->mensaje($r));
     }
 
+    /**
+     * POST /api/comprobantes/entrega (RF032/RN36). Quarkus solo emite si el insumo está Verificado
+     * con firma; si ya existe uno Emitido lo devuelve (yaExistia = true), así que reintentar es seguro.
+     * Devuelve: ['nroCen' => ..., 'estado' => ..., 'fecha' => ..., 'yaExistia' => bool]
+     */
+    public function emitirEntrega(string $codIns, string $codEmp): array
+    {
+        $ruta = '/api/comprobantes/entrega';
+        try {
+            $r = $this->http()->acceptJson()->post($ruta, ['codIns' => $codIns, 'codEmp' => $codEmp]);
+        } catch (ConnectionException $e) {
+            Log::channel('cies')->error("Quarkus no responde en {$ruta}: " . $e->getMessage());
+            throw new DomainException(self::MSG_CAIDO);
+        }
+
+        if ($r->successful() && $r->json('nroCen')) {
+            return $r->json();
+        }
+
+        $this->registrarFallo($ruta, $r);
+        throw new DomainException($this->mensaje($r));
+    }
+
+    /** GET /api/comprobantes/entrega/{nro}/pdf */
+    public function pdfEntrega(string $nro): string
+    {
+        return $this->descargar('/api/comprobantes/entrega/' . rawurlencode($nro) . '/pdf');
+    }
+
     /** GET /api/comprobantes/{nro}/pdf. Devuelve los bytes del PDF. */
     public function pdf(string $nro): string
     {
-        $ruta = '/api/comprobantes/' . rawurlencode($nro) . '/pdf';
+        return $this->descargar('/api/comprobantes/' . rawurlencode($nro) . '/pdf');
+    }
+
+    private function descargar(string $ruta): string
+    {
         try {
             $r = $this->http()->accept('application/pdf')->get($ruta);
         } catch (ConnectionException $e) {
