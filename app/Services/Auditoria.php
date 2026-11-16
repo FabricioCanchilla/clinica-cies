@@ -41,5 +41,31 @@ class Auditoria
             'COD_ROL' => $actor->COD_ROL,
             'COD_PAC' => $codPac ?? ($actor->COD_PAC ?? null),
         ]);
+
+        // RN46: un evento «Crítica» genera una notificación al administrador y al auditor
+        if ($criticidad === 'Crítica') {
+            self::notificarCritico($accion, $registro, $detalle);
+        }
+    }
+
+    private static function notificarCritico(string $accion, string $registro, string $detalle): void
+    {
+        $destinatarios = DB::table('USUARIO')
+            ->whereIn('COD_ROL', ['ROL001', 'ROL009'])
+            ->where('EST_USR', 'Activo')
+            ->pluck('COD_USR');
+
+        foreach ($destinatarios as $codUsr) {
+            DB::table('NOTIFICACION')->insert([
+                'COD_NOT' => sprintf('NOT%07d', (int) DB::table('NOTIFICACION')->max('id') + 1),
+                'FEC_NOT' => now(),
+                'TIP_NOT' => 'Alerta crítica',
+                'MSG_NOT' => mb_substr("{$accion}: {$detalle}", 0, 255),
+                'CAN_NOT' => 'Sistema',
+                'EST_NOT' => 'Enviada',
+                'REF_NOT' => mb_substr($registro, 0, 15),
+                'COD_USR' => $codUsr,
+            ]);
+        }
     }
 }
