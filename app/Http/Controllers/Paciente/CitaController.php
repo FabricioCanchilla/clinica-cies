@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Paciente;
 
 use App\Http\Controllers\Controller;
 use App\Services\CitaService;
+use App\Services\ComprobanteService;
+use App\Services\InsumoService;
 use Carbon\Carbon;
 use DomainException;
 use Illuminate\Http\Request;
@@ -120,8 +122,10 @@ class CitaController extends Controller
         $datos = $request->validate([
             'codigo' => 'required|string|size:6',
             'metodo' => 'required|string|max:7',
+            'firma'  => 'required|string',
         ], [
-            'codigo.size' => 'El código tiene 6 dígitos.',
+            'codigo.size'    => 'El código tiene 6 dígitos.',
+            'firma.required' => 'Falta tu firma (RN16: el pago se confirma con firma y código).',
         ], [
             'metodo' => 'método de pago',
         ]);
@@ -138,7 +142,8 @@ class CitaController extends Controller
                 auth()->user()->COD_USR,
                 $otp['codOtp'],
                 $datos['codigo'],
-                $datos['metodo']
+                $datos['metodo'],
+                $datos['firma']
             );
         } catch (DomainException $e) {
             return back()->withErrors(['otp' => $e->getMessage()]);
@@ -146,8 +151,71 @@ class CitaController extends Controller
 
         session()->forget('otp_cita.' . $codCit);
 
+        $ok = "Cita confirmada. Anticipo de Bs {$pago->monto} registrado (pago {$pago->COD_PAG}).";
+
+        if ($pago->NRO_COM) {
+            return redirect()->route('paciente.dashboard')
+                ->with('ok', "{$ok} Tu comprobante es el {$pago->NRO_COM}.");
+        }
+
         return redirect()->route('paciente.dashboard')
-            ->with('ok', "Cita confirmada. Anticipo de Bs {$pago->monto} registrado (pago {$pago->COD_PAG}).");
+            ->with('ok', $ok)
+            ->with('aviso', 'No pudimos generar tu comprobante en este momento. Tu pago y tu cita están confirmados; usa "Reintentar comprobante" en la lista de citas.');
+    }
+
+    /** Reintento del comprobante del anticipo cuando Quarkus falló después del pago. */
+    public function reintentarComprobante(string $codCit)
+    {
+        try {
+            $nro = $this->citas->reintentarComprobante($codCit, $this->codPac());
+        } catch (DomainException $e) {
+            return back()->withErrors(['comprobante' => $e->getMessage()]);
+        }
+
+        if (!$nro) {
+            return back()->with('aviso', 'El servicio de comprobantes sigue sin responder. Tu pago está registrado; intenta más tarde.');
+        }
+
+        return back()->with('ok', "Comprobante {$nro} generado.");
+    }
+
+    /** PDF del comprobante del anticipo (lo genera Quarkus; aquí solo se verifica que la cita sea del paciente). */
+    public function comprobantePdf(string $codCit, ComprobanteService $comprobantes)
+    {
+        $nro = $this->citas->comprobanteAnticipo($codCit, $this->codPac());
+        if (!$nro) {
+            abort(404, 'Esta cita no tiene comprobante emitido.');
+        }
+
+        try {
+            $pdf = $comprobantes->pdf($nro);
+        } catch (DomainException $e) {
+            return back()->withErrors(['comprobante' => $e->getMessage()]);
+        }
+
+        return response($pdf, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => "inline; filename=\"{$nro}.pdf\"",
+        ]);
+    }
+
+    /** RF016: PDF del comprobante de entrega de un insumo del propio paciente. */
+    public function comprobanteInsumoPdf(string $nroCen, InsumoService $insumos)
+    {
+        if (!$insumos->comprobanteEsDelPaciente($nroCen, $this->codPac())) {
+            abort(404);
+        }
+
+        try {
+            $pdf = $insumos->pdfEntrega($nroCen);
+        } catch (DomainException $e) {
+            return back()->withErrors(['comprobante' => $e->getMessage()]);
+        }
+
+        return response($pdf, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => "inline; filename=\"{$nroCen}.pdf\"",
+        ]);
     }
 
     /** El usuario tiene que ser un paciente con ficha. */

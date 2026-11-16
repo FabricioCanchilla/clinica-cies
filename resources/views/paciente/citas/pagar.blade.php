@@ -225,7 +225,7 @@
 
         @else
 
-            <form method="POST" action="{{ route('paciente.citas.confirmar', $cita->COD_CIT) }}">
+            <form method="POST" action="{{ route('paciente.citas.confirmar', $cita->COD_CIT) }}" id="form-pago">
                 @csrf
 
                 <div class="campo">
@@ -246,6 +246,17 @@
                            inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
                            autocomplete="one-time-code" required autofocus>
                     <p class="ayuda">Dura 5 minutos y tienes 3 intentos.</p>
+                </div>
+
+                <div class="campo">
+                    <label>Tu firma (con el mouse o el dedo)</label>
+                    <canvas id="lienzo" width="600" height="180"
+                            style="width: 100%; height: 180px; border: 1px dashed #94a3b8; border-radius: 10px; background: #fff; touch-action: none; display: block;"></canvas>
+                    <p class="ayuda">
+                        El pago se confirma con tu firma y el código (verificación en dos capas).
+                        <a href="#" id="limpiar">Borrar firma</a>
+                    </p>
+                    <input type="hidden" name="firma" id="firma">
                 </div>
 
                 <button type="submit" class="boton">Confirmar el pago</button>
@@ -285,6 +296,36 @@
 
     const tic = setInterval(pintarReloj, 1000);
     pintarReloj();
+</script>
+
+<script>
+    // RN15/RN16: firma manuscrita en pantalla para confirmar el anticipo
+    (function () {
+        const c = document.getElementById('lienzo');
+        if (!c) return;
+        const ctx = c.getContext('2d');
+        ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#0f172a';
+        let dibujando = false, trazos = 0;
+
+        function punto(e) {
+            const r = c.getBoundingClientRect();
+            return { x: (e.clientX - r.left) * c.width / r.width, y: (e.clientY - r.top) * c.height / r.height };
+        }
+        c.addEventListener('pointerdown', e => { dibujando = true; const p = punto(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); c.setPointerCapture(e.pointerId); });
+        c.addEventListener('pointermove', e => { if (!dibujando) return; const p = punto(e); ctx.lineTo(p.x, p.y); ctx.stroke(); trazos++; });
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => c.addEventListener(t, () => { dibujando = false; }));
+
+        document.getElementById('limpiar').addEventListener('click', e => { e.preventDefault(); ctx.clearRect(0, 0, c.width, c.height); trazos = 0; });
+
+        document.getElementById('form-pago').addEventListener('submit', e => {
+            if (trazos < 10) {
+                e.preventDefault();
+                alert('Falta tu firma.');
+                return;
+            }
+            document.getElementById('firma').value = c.toDataURL('image/png');
+        });
+    })();
 </script>
 
 </body>
