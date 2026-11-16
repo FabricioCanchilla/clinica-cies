@@ -317,6 +317,16 @@
         <header>
             <span class="titulo">Panel de {{ config('roles.' . auth()->user()->COD_ROL . '.nombre') }}</span>
             <div class="quien">
+                @php
+                    $nuevas = \Illuminate\Support\Facades\DB::table('NOTIFICACION')
+                        ->where('COD_USR', auth()->user()->COD_USR)->where('EST_NOT', 'Enviada')->count();
+                @endphp
+                <a href="{{ route('notificaciones') }}" title="Notificaciones" style="color: #475569; text-decoration: none; position: relative;">
+                    <i class="fas fa-bell"></i>
+                    @if ($nuevas > 0)
+                        <span style="position: absolute; top: -8px; right: -10px; background: #dc2626; color: #fff; border-radius: 999px; font-size: 10px; font-weight: 700; padding: 1px 6px;">{{ $nuevas }}</span>
+                    @endif
+                </a>
                 <span><i class="fas fa-user-shield"></i> {{ auth()->user()->USR_USR }} · {{ config('roles.' . auth()->user()->COD_ROL . '.nombre') }}</span>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf

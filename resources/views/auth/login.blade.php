@@ -431,6 +431,9 @@
             <h2 style="font-size: 22px; color: #0f172a; margin-bottom: 4px; font-weight: 700;">Iniciar Sesión</h2>
             <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Accede a tus citas e historial médico institucional</p>
 
+            @if (session('ok'))
+                <div class="error-box" style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;">{{ session('ok') }}</div>
+            @endif
             @if ($errors->any())
                 <div class="error-box">{{ $errors->first() }}</div>
             @endif

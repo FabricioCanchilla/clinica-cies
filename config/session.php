@@ -32,7 +32,8 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    // RN06 / RNF014: cierre por inactividad a los 15 min (ajustable entre 5 y 60 con SESSION_LIFETIME)
+    'lifetime' => (int) min(60, max(5, (int) env('SESSION_LIFETIME', 15))),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

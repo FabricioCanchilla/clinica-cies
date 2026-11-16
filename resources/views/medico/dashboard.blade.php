@@ -28,6 +28,15 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
+    <style>
+        /* RNF011: etiquetas por estado real de la cita */
+        .estado-pendiente-de-pago { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
+        .estado-confirmada       { background: #d1fae5; color: #047857; border-color: #10b981; }
+        .estado-atendida         { background: #dbeafe; color: #1d4ed8; border-color: #3b82f6; }
+        .estado-cancelada        { background: #fee2e2; color: #b91c1c; border-color: #ef4444; }
+        .estado-expirada         { background: #f1f5f9; color: #64748b; border-color: #94a3b8; }
+        .estado-no-asistio       { background: #fce7f3; color: #9d174d; border-color: #ec4899; }
+    </style>
 </head>
 <body class="bg-bglight font-sans text-slate-800 min-h-screen flex">
 
@@ -81,6 +90,35 @@
                 <p class="text-slate-500 text-sm mt-1">Gestione sus citas y consultas del mes.</p>
             </div>
 
+            <!-- RF021: programación del día -->
+            <div class="bg-white rounded-2xl shadow-sm border border-borderlight p-5 mb-6">
+                <h3 class="text-base font-bold text-slate-800 mb-3"><i class="fas fa-calendar-day text-cies mr-1"></i> Citas de hoy ({{ \Carbon\Carbon::today()->format('d/m/Y') }})</h3>
+                @if ($hoy->isEmpty())
+                    <p class="text-sm text-slate-500">No tiene citas programadas para hoy.</p>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-xs uppercase tracking-wide text-slate-500 border-b border-borderlight">
+                                    <th class="py-2 pr-3">Hora</th><th class="py-2 pr-3">Paciente</th><th class="py-2 pr-3">Motivo</th><th class="py-2 pr-3">Servicio</th><th class="py-2">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($hoy as $c)
+                                    <tr class="border-b border-slate-100">
+                                        <td class="py-2 pr-3 font-bold">{{ $c['hora'] }}</td>
+                                        <td class="py-2 pr-3">{{ $c['paciente'] }} <span class="text-xs text-slate-400">CI {{ $c['ci'] }}</span></td>
+                                        <td class="py-2 pr-3">{{ $c['motivo'] }}</td>
+                                        <td class="py-2 pr-3">{{ $c['servicio'] }} · {{ $c['consultorio'] }}</td>
+                                        <td class="py-2"><span class="estado-{{ \Illuminate\Support\Str::slug($c['estado']) }} text-[11px] px-2.5 py-1 rounded-full font-bold">{{ $c['estado'] }}</span></td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+
             <!-- Calendario - ELIMINADA LA ALTURA FIJA -->
             <div x-data="calendarioApp({{ json_encode($citas) }})" class="bg-white rounded-2xl shadow-sm border border-borderlight overflow-hidden flex flex-col mb-8">
                 
@@ -94,8 +132,15 @@
                         </div>
                         <h3 class="text-xl font-bold text-slate-800 capitalize" x-text="nombreMes"></h3>
                     </div>
-                    <div class="text-xs font-medium text-slate-500 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
-                        <i class="fas fa-info-circle mr-1 text-cies"></i> Haga clic en un día para ver todas las citas
+                    <div class="flex items-center gap-2">
+                        <input type="text" x-model="buscar" placeholder="Paciente o CI"
+                               class="text-sm border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-cies">
+                        <select x-model="estado" class="text-sm border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-cies">
+                            <option value="">Todos los estados</option>
+                            @foreach ($estados as $e)
+                                <option value="{{ $e }}">{{ $e }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
 
@@ -119,18 +164,14 @@
                                       x-text="dia.numero"></span>
                                 
                                 <!-- Badge si hay muchas citas -->
-                                <span x-show="citasPorDia(dia.numero).length > 3" class="text-[10px] font-bold text-white bg-cies px-1.5 py-0.5 rounded-full shadow-sm" x-text="'+' + (citasPorDia(dia.numero).length - 3)"></span>
+                                <span x-show="citasPorDia(dia.fecha).length > 3" class="text-[10px] font-bold text-white bg-cies px-1.5 py-0.5 rounded-full shadow-sm" x-text="'+' + (citasPorDia(dia.fecha).length - 3)"></span>
                             </div>
 
                             <!-- Vista previa de Citas (Máximo 3) -->
                             <div class="flex flex-col gap-1.5 overflow-hidden mt-1">
-                                <template x-for="(cita, cIndex) in citasPorDia(dia.numero).slice(0, 3)" :key="cIndex">
+                                <template x-for="(cita, cIndex) in citasPorDia(dia.fecha).slice(0, 3)" :key="cIndex">
                                     <div class="text-[10px] leading-tight px-2 py-1 rounded-md truncate border-l-2 shadow-sm"
-                                         :class="{
-                                             'bg-emerald-50 text-emerald-800 border-emerald-500': cita.estado === 'Confirmada',
-                                             'bg-blue-50 text-blue-800 border-blue-500': cita.estado === 'En espera',
-                                             'bg-red-50 text-red-800 border-red-500': cita.estado === 'Cancelada'
-                                         }">
+                                         :class="claseEstado(cita.estado)">
                                         <span class="font-bold" x-text="cita.hora"></span> - <span x-text="cita.paciente"></span>
                                     </div>
                                 </template>
@@ -158,7 +199,7 @@
 
                         <!-- Lista completa de citas -->
                         <div class="p-5 overflow-y-auto flex flex-col gap-3 bg-white">
-                            <template x-if="citasPorDia(diaSeleccionado?.numero).length === 0">
+                            <template x-if="citasPorDia(diaSeleccionado?.fecha).length === 0">
                                 <div class="text-center py-8">
                                     <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-100 mb-3 text-slate-400">
                                         <i class="fas fa-calendar-times text-xl"></i>
@@ -167,23 +208,19 @@
                                 </div>
                             </template>
 
-                            <template x-for="(cita, index) in citasPorDia(diaSeleccionado?.numero)" :key="index">
+                            <template x-for="(cita, index) in citasPorDia(diaSeleccionado?.fecha)" :key="index">
                                 <div class="bg-white border border-slate-200 p-4 rounded-xl flex items-start gap-4 hover:border-cies hover:shadow-md transition group">
                                     <div class="bg-slate-50 text-slate-700 border border-slate-200 px-3 py-2 rounded-lg text-sm font-bold text-center w-16 shadow-sm">
                                         <span x-text="cita.hora"></span>
                                     </div>
                                     <div class="flex-1">
-                                        <h4 class="text-base font-bold text-slate-900" x-text="cita.paciente"></h4>
+                                        <h4 class="text-base font-bold text-slate-900"><span x-text="cita.paciente"></span> <span class="text-xs font-normal text-slate-400" x-text="'CI ' + cita.ci"></span></h4>
                                         <p class="text-sm text-slate-500 mt-0.5" x-text="cita.motivo"></p>
                                         
                                         <div class="mt-3 flex items-center justify-between">
                                             <span class="text-[11px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wide"
-                                                  :class="{
-                                                      'bg-emerald-100 text-emerald-700': cita.estado === 'Confirmada',
-                                                      'bg-blue-100 text-blue-700': cita.estado === 'En espera',
-                                                      'bg-red-100 text-red-700': cita.estado === 'Cancelada'
-                                                  }" x-text="cita.estado"></span>
-                                            <button class="text-xs bg-cies hover:bg-ciesdark text-white px-3 py-1.5 rounded-lg font-medium transition shadow-sm shadow-emerald-200 group-hover:scale-105">Iniciar Consulta</button>
+                                                  :class="claseEstado(cita.estado)" x-text="cita.estado"></span>
+                                            <span class="text-xs text-slate-400" x-text="cita.servicio + ' · ' + cita.consultorio"></span>
                                         </div>
                                     </div>
                                 </div>
@@ -201,6 +238,8 @@
         document.addEventListener('alpine:init', () => {
             Alpine.data('calendarioApp', (citas) => ({
                 citas: citas,
+                buscar: '',
+                estado: '',
                 mesActual: new Date().getMonth(),
                 anioActual: new Date().getFullYear(),
                 diaSeleccionado: null,
@@ -218,27 +257,39 @@
                     
                     let dias = [];
                     
+                    const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+
                     for (let i = diaSemanaInicio - 1; i >= 0; i--) {
-                        dias.push({ numero: new Date(this.anioActual, this.mesActual, 0 - i).getDate(), esDelMes: false, esHoy: false });
+                        const d = new Date(this.anioActual, this.mesActual, 0 - i);
+                        dias.push({ numero: d.getDate(), fecha: iso(d), esDelMes: false, esHoy: false });
                     }
                     
                     const hoy = new Date();
                     for (let i = 1; i <= ultimoDia.getDate(); i++) {
+                        const d = new Date(this.anioActual, this.mesActual, i);
                         let esHoy = (i === hoy.getDate() && this.mesActual === hoy.getMonth() && this.anioActual === hoy.getFullYear());
-                        dias.push({ numero: i, esDelMes: true, esHoy: esHoy });
+                        dias.push({ numero: i, fecha: iso(d), esDelMes: true, esHoy: esHoy });
                     }
                     
                     const diasRestantes = 42 - dias.length;
                     for (let i = 1; i <= diasRestantes; i++) {
-                        dias.push({ numero: i, esDelMes: false, esHoy: false });
+                        const d = new Date(this.anioActual, this.mesActual + 1, i);
+                        dias.push({ numero: i, fecha: iso(d), esDelMes: false, esHoy: false });
                     }
                     
                     return dias;
                 },
 
-                citasPorDia(dia) {
-                    if (!dia) return [];
-                    return this.citas.filter(c => c.dia === dia);
+                citasPorDia(fecha) {
+                    if (!fecha) return [];
+                    const b = this.buscar.trim().toLowerCase();
+                    return this.citas.filter(c => c.fecha === fecha
+                        && (this.estado === '' || c.estado === this.estado)
+                        && (b === '' || c.paciente.toLowerCase().includes(b) || String(c.ci).startsWith(b)));
+                },
+
+                claseEstado(estado) {
+                    return 'estado-' + estado.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-');
                 },
 
                 cambiarMes(delta) {
