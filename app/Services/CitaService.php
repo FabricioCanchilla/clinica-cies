@@ -12,7 +12,7 @@ class CitaService
 {
     private const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-    public function __construct(private OtpClient $otp)
+    public function __construct(private OtpClient $otp, private ComprobanteService $comprobantes)
     {
     }
 
@@ -193,8 +193,34 @@ class CitaService
             ->join('SERVICIO as s', 's.COD_SRV', '=', 'c.COD_SRV')
             ->where('c.COD_PAC', $codPac)
             ->orderByDesc('c.FEC_CIT')->orderByDesc('c.HOR_CIT')
-            ->get(['c.COD_CIT', 'c.FEC_CIT', 'c.HOR_CIT', 'c.EST_CIT', 'c.MOT_CIT', 'c.FECEXP_CIT',
-                   'e.TIT_EMP', 'e.NOM_EMP', 'e.APE_EMP', 's.NOM_SRV']);
+            ->select(['c.COD_CIT', 'c.FEC_CIT', 'c.HOR_CIT', 'c.EST_CIT', 'c.MOT_CIT', 'c.FECEXP_CIT',
+                      'e.TIT_EMP', 'e.NOM_EMP', 'e.APE_EMP', 's.NOM_SRV'])
+            // Comprobante del anticipo (en línea) y si hay un anticipo confirmado sin comprobante
+            ->selectSub(DB::table('COMPROBANTE')->select('NRO_COM')
+                ->whereColumn('COD_CIT', 'c.COD_CIT')->where('EST_COM', 'Emitido')->whereNull('COD_CAJ')
+                ->limit(1), 'NRO_COM_ANT')
+            ->selectSub(DB::table('PAGO')->selectRaw('COUNT(*)')
+                ->whereColumn('COD_CIT', 'c.COD_CIT')->where('TIP_PAG', 'Adelanto')
+                ->where('EST_PAG', 'Confirmado')->whereNull('COD_CAJ'), 'ANTICIPOS')
+            ->get();
+    }
+
+    /** Reintento manual del comprobante del anticipo (botón del panel del paciente). */
+    public function reintentarComprobante(string $codCit, string $codPac): ?string
+    {
+        if (!DB::table('CITA')->where('COD_CIT', $codCit)->where('COD_PAC', $codPac)->exists()) {
+            throw new DomainException('La cita no existe.');
+        }
+        return $this->comprobantes->emitirAnticipo($codCit);
+    }
+
+    /** NRO del comprobante del anticipo de una cita del paciente (para descargar el PDF). */
+    public function comprobanteAnticipo(string $codCit, string $codPac): ?string
+    {
+        if (!DB::table('CITA')->where('COD_CIT', $codCit)->where('COD_PAC', $codPac)->exists()) {
+            return null;
+        }
+        return $this->comprobantes->anticipoEmitido($codCit)?->NRO_COM;
     }
 
     public function montoAnticipo(float $precio): float
@@ -246,7 +272,7 @@ class CitaService
             throw new DomainException(OtpClient::mensajeMotivo($res));
         }
 
-        return DB::transaction(function () use ($cita, $codCit, $codPac, $codUsr, $codOtp, $codMet) {
+        $pago = DB::transaction(function () use ($cita, $codCit, $codPac, $codUsr, $codOtp, $codMet) {
             $c = DB::table('CITA')->where('COD_CIT', $codCit)->where('COD_PAC', $codPac)
                 ->lockForUpdate()->first();
             if (!$c || $c->EST_CIT !== 'Pendiente de pago') {
@@ -299,6 +325,16 @@ class CitaService
 
             return (object) ['COD_PAG' => $codPag, 'monto' => $cita->anticipo, 'COD_CIT' => $codCit];
         });
+
+        // Ya hubo commit: el pago está confirmado pase lo que pase con Quarkus.
+        // Si falla, emitirAnticipo() lo audita (DOM04) y devuelve null -> botón "Reintentar comprobante".
+        try {
+            $pago->NRO_COM = $this->comprobantes->emitirAnticipo($codCit);
+        } catch (DomainException $e) {
+            $pago->NRO_COM = null;
+        }
+
+        return $pago;
     }
 
     // ---------- RNF007: liberación automática ----------
