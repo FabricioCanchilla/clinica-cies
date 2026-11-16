@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuditoriaController;
 use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\Auth\CambioClaveController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RecuperacionController;
 use App\Http\Controllers\Medico\DashboardController as MedicoDashboardController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -22,9 +23,14 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login'])->name('login.post');
     
-    Route::get('/recuperar-contrasena', function () {
-        return view('auth.forgot-password'); 
-    })->name('password.request');
+    // RF005 / RN04: recuperación con enlace firmado de 30 min y un solo uso
+    Route::get('/recuperar-contrasena', [RecuperacionController::class, 'form'])->name('password.request');
+    Route::post('/recuperar-contrasena', [RecuperacionController::class, 'enviar'])
+        ->middleware('throttle:5,1')->name('password.email');
+    Route::get('/restablecer/{codUsr}', [RecuperacionController::class, 'formReset'])
+        ->middleware('signed')->name('password.reset');
+    Route::post('/restablecer/{codUsr}', [RecuperacionController::class, 'reset'])
+        ->middleware(['signed', 'throttle:5,1'])->name('password.update');
     
     Route::post('/register', function () {
         return back()->with('success', 'Registro de paciente procesado.');
@@ -35,6 +41,9 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+    // Bandeja de notificaciones del usuario (RN46 alertas críticas)
+    Route::get('/notificaciones', [\App\Http\Controllers\Comun\NotificacionController::class, 'index'])->name('notificaciones');
 
     Route::get('/cambiar-clave', [CambioClaveController::class, 'form'])->name('clave.cambiar');
     Route::post('/cambiar-clave', [CambioClaveController::class, 'actualizar'])->name('clave.actualizar');
