@@ -16,7 +16,10 @@ class LoginController extends Controller
 
     public function showForm()
     {
-        return view('auth.login');
+        // RF001: el Dashboard público muestra las especialidades registradas
+        $especialidades = \Illuminate\Support\Facades\DB::table('ESPECIALIDAD')->orderBy('DES_ESP')->get(['DES_ESP']);
+
+        return view('auth.login', compact('especialidades'));
     }
 
     public function login(Request $request)
