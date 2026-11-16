@@ -211,6 +211,7 @@
         .alerta { padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; border: 1px solid transparent; }
         .alerta.ok { background: var(--cies-bg); border-color: #a7f3d0; color: #047857; }
         .alerta.error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+        .alerta.aviso { background: #fffbeb; border-color: #fde68a; color: #92400e; }
 
         .formulario { max-width: 520px; }
         .formulario.ancho { max-width: 760px; }
@@ -297,6 +298,17 @@
                     <a href="{{ route('farmacia.lotes') }}" class="{{ request()->routeIs('farmacia.lotes*') ? 'activo' : '' }}">
                     <i class="fas fa-boxes-stacked"></i> Lotes y stock
                 </a>
+            @elseif (auth()->user()->COD_ROL === 'ROL004')
+                <a href="{{ route('enfermeria.dashboard') }}" class="{{ request()->routeIs('enfermeria.dashboard') ? 'activo' : '' }}">
+                    <i class="fas fa-hand-holding-medical"></i> Insumos de familiares
+                </a>
+                <a href="{{ route('enfermeria.insumos.crear') }}" class="{{ request()->routeIs('enfermeria.insumos.crear') ? 'activo' : '' }}">
+                    <i class="fas fa-plus"></i> Registrar insumo
+                </a>
+            @elseif (auth()->user()->COD_ROL === 'ROL005')
+                <a href="{{ route('caja.dashboard') }}" class="activo">
+                    <i class="fas fa-cash-register"></i> Caja
+                </a>
             @endif
         </nav>
     </aside>
@@ -315,6 +327,9 @@
         <main>
             @if (session('ok'))
                 <div class="alerta ok">{{ session('ok') }}</div>
+            @endif
+            @if (session('aviso'))
+                <div class="alerta aviso">{{ session('aviso') }}</div>
             @endif
             @if ($errors->any())
                 <div class="alerta error">

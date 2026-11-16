@@ -29,7 +29,7 @@ class Auditoria
         DB::table('AUDITORIA')->insert([
             'COD_AUD' => sprintf('AUD%08d', $siguiente),
             'FEC_AUD' => now(),
-            'ACC_AUD' => $accion,
+            'ACC_AUD' => mb_substr($accion, 0, 20),
             'CRI_AUD' => $criticidad,
             'ENT_AUD' => $entidad,
             'REG_AUD' => $registro,

@@ -188,6 +188,13 @@
             </div>
         @endif
 
+        @if (session('aviso'))
+            <div style="margin-bottom: 25px; padding: 16px; border-radius: 12px; background: #fffbeb; color: #92400e; border: 1px solid #fde68a;">
+                <i class="fas fa-triangle-exclamation"></i>
+                {{ session('aviso') }}
+            </div>
+        @endif
+
         @if ($errors->any())
             <div style="margin-bottom: 25px; padding: 16px; border-radius: 12px; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca;">
                 <i class="fas fa-circle-exclamation"></i>
@@ -363,6 +370,27 @@
                                         Pagar anticipo
                                     </a>
                                 @endif
+
+                                @if ($cita->NRO_COM_ANT)
+                                    <a href="{{ route('paciente.citas.comprobante', $cita->COD_CIT) }}" target="_blank"
+                                       style="display: inline-block; margin-left: 8px; background: #eef2ff; color: #3730a3;
+                                              padding: 5px 12px; border-radius: 999px; text-decoration: none;
+                                              font-size: 13px; font-weight: 600; white-space: nowrap;">
+                                        <i class="fas fa-file-pdf"></i>
+                                        Comprobante {{ $cita->NRO_COM_ANT }}
+                                    </a>
+                                @elseif ((int) $cita->ANTICIPOS > 0)
+                                    <form method="POST" action="{{ route('paciente.citas.comprobante.reintentar', $cita->COD_CIT) }}" style="display: inline;">
+                                        @csrf
+                                        <button type="submit"
+                                                style="margin-left: 8px; background: #fef3c7; color: #92400e; border: 1px solid #fde68a;
+                                                       padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
+                                                       cursor: pointer; white-space: nowrap;">
+                                            <i class="fas fa-rotate-right"></i>
+                                            Reintentar comprobante
+                                        </button>
+                                    </form>
+                                @endif
                             </td>
 
                             <td style="padding: 12px;">
@@ -435,6 +463,48 @@
 
         </div>
 
+    @endif
+
+</section>
+
+<section class="informacion" style="margin-top: 30px;">
+
+    <h3>
+        <i class="fas fa-hand-holding-medical"></i>
+        Comprobantes de insumos entregados por familiares
+    </h3>
+
+    @if ($insumos->isEmpty())
+        <p>No hay insumos entregados por tus familiares.</p>
+    @else
+        <div style="overflow-x: auto; margin-top: 20px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #d1fae5; color: #065f46;">
+                        <th style="padding: 12px;">Comprobante</th>
+                        <th style="padding: 12px;">Fecha</th>
+                        <th style="padding: 12px;">Medicamento</th>
+                        <th style="padding: 12px;">Cantidad</th>
+                        <th style="padding: 12px;">Entregado por</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($insumos as $c)
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 12px;">
+                                <a href="{{ route('paciente.insumos.comprobante', $c->NRO_CEN) }}" target="_blank" style="color: #3730a3; font-weight: 600;">
+                                    <i class="fas fa-file-pdf"></i> {{ $c->NRO_CEN }}
+                                </a>
+                            </td>
+                            <td style="padding: 12px;">{{ \Carbon\Carbon::parse($c->FEC_CEN)->format('d/m/Y H:i') }}</td>
+                            <td style="padding: 12px;">{{ $c->DES_MED }} {{ $c->DOS_INS }}</td>
+                            <td style="padding: 12px;">{{ $c->CAN_INS }}</td>
+                            <td style="padding: 12px;">{{ $c->NOM_ENT }} {{ $c->APE_ENT }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
     @endif
 
 </section>
