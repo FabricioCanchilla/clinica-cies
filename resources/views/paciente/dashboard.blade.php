@@ -467,6 +467,48 @@
 
 </section>
 
+<section class="informacion" style="margin-top: 30px;">
+
+    <h3>
+        <i class="fas fa-hand-holding-medical"></i>
+        Comprobantes de insumos entregados por familiares
+    </h3>
+
+    @if ($insumos->isEmpty())
+        <p>No hay insumos entregados por tus familiares.</p>
+    @else
+        <div style="overflow-x: auto; margin-top: 20px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #d1fae5; color: #065f46;">
+                        <th style="padding: 12px;">Comprobante</th>
+                        <th style="padding: 12px;">Fecha</th>
+                        <th style="padding: 12px;">Medicamento</th>
+                        <th style="padding: 12px;">Cantidad</th>
+                        <th style="padding: 12px;">Entregado por</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($insumos as $c)
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 12px;">
+                                <a href="{{ route('paciente.insumos.comprobante', $c->NRO_CEN) }}" target="_blank" style="color: #3730a3; font-weight: 600;">
+                                    <i class="fas fa-file-pdf"></i> {{ $c->NRO_CEN }}
+                                </a>
+                            </td>
+                            <td style="padding: 12px;">{{ \Carbon\Carbon::parse($c->FEC_CEN)->format('d/m/Y H:i') }}</td>
+                            <td style="padding: 12px;">{{ $c->DES_MED }} {{ $c->DOS_INS }}</td>
+                            <td style="padding: 12px;">{{ $c->CAN_INS }}</td>
+                            <td style="padding: 12px;">{{ $c->NOM_ENT }} {{ $c->APE_ENT }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
+
+</section>
+
 
 <section class="informacion" style="margin-top: 30px;">
 

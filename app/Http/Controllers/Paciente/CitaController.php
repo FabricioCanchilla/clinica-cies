@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Paciente;
 use App\Http\Controllers\Controller;
 use App\Services\CitaService;
 use App\Services\ComprobanteService;
+use App\Services\InsumoService;
 use Carbon\Carbon;
 use DomainException;
 use Illuminate\Http\Request;
@@ -121,8 +122,10 @@ class CitaController extends Controller
         $datos = $request->validate([
             'codigo' => 'required|string|size:6',
             'metodo' => 'required|string|max:7',
+            'firma'  => 'required|string',
         ], [
-            'codigo.size' => 'El código tiene 6 dígitos.',
+            'codigo.size'    => 'El código tiene 6 dígitos.',
+            'firma.required' => 'Falta tu firma (RN16: el pago se confirma con firma y código).',
         ], [
             'metodo' => 'método de pago',
         ]);
@@ -139,7 +142,8 @@ class CitaController extends Controller
                 auth()->user()->COD_USR,
                 $otp['codOtp'],
                 $datos['codigo'],
-                $datos['metodo']
+                $datos['metodo'],
+                $datos['firma']
             );
         } catch (DomainException $e) {
             return back()->withErrors(['otp' => $e->getMessage()]);
@@ -192,6 +196,25 @@ class CitaController extends Controller
         return response($pdf, 200, [
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => "inline; filename=\"{$nro}.pdf\"",
+        ]);
+    }
+
+    /** RF016: PDF del comprobante de entrega de un insumo del propio paciente. */
+    public function comprobanteInsumoPdf(string $nroCen, InsumoService $insumos)
+    {
+        if (!$insumos->comprobanteEsDelPaciente($nroCen, $this->codPac())) {
+            abort(404);
+        }
+
+        try {
+            $pdf = $insumos->pdfEntrega($nroCen);
+        } catch (DomainException $e) {
+            return back()->withErrors(['comprobante' => $e->getMessage()]);
+        }
+
+        return response($pdf, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => "inline; filename=\"{$nroCen}.pdf\"",
         ]);
     }
 
