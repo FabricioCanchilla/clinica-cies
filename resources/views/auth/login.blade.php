@@ -231,6 +231,7 @@
 
         .modal-box label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px; }
         .modal-box input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 14px; font-size: 14px; background: #f8fafc; color: #0f172a; }
+        .modal-box .reg-select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 14px; font-size: 14px; background: #f8fafc; color: #0f172a; }
         .modal-box input:focus { outline: none; border-color: var(--cies-green); background: #fff; box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15); }
 
         .btn-submit-main {
@@ -288,6 +289,7 @@
             <li><a href="#nosotros">Nosotros</a></li>
             <li><a href="#servicios">Servicios</a></li>
             <li><a href="#investigacion">Investigación</a></li>
+            <li><a href="#ubicacion">Ubicación</a></li>
             <li><a href="#contacto">Contacto</a></li>
         </ul>
 
@@ -351,13 +353,31 @@
         </div>
     </div>
 
-    <!-- SECCIÓN: SERVICIOS Y ESPECIALIDADES -->
+    <!-- SECCIÓN: NOSOTROS (RF001: reseña y misión) -->
+    <section class="section" id="nosotros">
+        <h2 class="section-title">Quiénes Somos</h2>
+        <p class="section-subtitle">Centro de Investigación, Educación y Servicios</p>
+        <div class="cards-grid">
+            <div class="info-card">
+                <span class="tag">Reseña</span>
+                <h3>Clínica CIES</h3>
+                <p>El CIES es una institución privada sin fines de lucro enfocada en el desarrollo social y la salud integral en Bolivia, con una reconocida trayectoria en salud sexual y reproductiva. Su red nacional cuenta con clínicas y policonsultorios en el país, incluida la ciudad de La Paz.</p>
+            </div>
+            <div class="info-card">
+                <span class="tag">Misión</span>
+                <h3>Salud integral para la comunidad</h3>
+                <p>Brindar servicios de salud integral, humanizados y de calidad, con atención en consulta externa, laboratorio, farmacia e internación, coordinando de forma segura y trazable el trabajo de todo el personal en beneficio del paciente.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECCIÓN: SERVICIOS Y ESPECIALIDADES (RF001) -->
     <section class="section" id="servicios">
         <h2 class="section-title">Servicios y Especialidades Médicas</h2>
-        <p class="section-subtitle">Catálogo completo para orientar tu atención y agendamiento de citas</p>
+        <p class="section-subtitle">Catálogo para orientar tu atención y agendamiento de citas</p>
 
         <div class="cards-grid">
-            <div class="info-card" id="nosotros">
+            <div class="info-card">
                 <h3>Medicina General e Integral</h3>
                 <p>Valoración primaria, control preventivo de salud y seguimiento médico oportuno para toda la familia.</p>
             </div>
@@ -370,6 +390,15 @@
                 <p>Análisis clínicos rápidos, ecografías y pruebas especializadas con máxima confiabilidad.</p>
             </div>
         </div>
+
+        @if (!empty($especialidades) && count($especialidades))
+            <h3 style="text-align:center; margin: 32px 0 14px; font-size: 18px; color:#0f172a;">Especialidades disponibles para agendar</h3>
+            <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
+                @foreach ($especialidades as $esp)
+                    <span class="tag" style="font-size:13px; padding:8px 14px;">{{ $esp->DES_ESP }}</span>
+                @endforeach
+            </div>
+        @endif
     </section>
 
     <!-- SECCIÓN: INVESTIGACIÓN E IMPACTO SOCIAL -->
@@ -390,6 +419,29 @@
         </div>
     </section>
 
+    <!-- SECCIÓN: UBICACIÓN (RF002 / RF004: mapa interactivo sin iniciar sesión) -->
+    <section class="section" id="ubicacion">
+        <h2 class="section-title">Ubicación y Contacto</h2>
+        <p class="section-subtitle">Encuéntranos en La Paz. Ante una emergencia llama al 160.</p>
+        <div style="border-radius:16px; overflow:hidden; border:1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,.06);">
+            <iframe title="Mapa de la Clínica CIES" loading="lazy" style="width:100%; height:360px; border:0; display:block;"
+                src="https://www.openstreetmap.org/export/embed.html?bbox=-68.1500%2C-16.5200%2C-68.1050%2C-16.4850&amp;layer=mapnik&amp;marker=-16.5000%2C-68.1300"></iframe>
+        </div>
+        <p style="text-align:center; margin-top:10px; font-size:13px;">
+            <a href="https://www.openstreetmap.org/?mlat=-16.5000&amp;mlon=-68.1300#map=16/-16.5000/-68.1300" target="_blank" rel="noopener" style="color: var(--cies-green); font-weight:600;">Abrir el mapa en pantalla completa</a>
+        </p>
+    </section>
+
+    <!-- RF002: botón de emergencia siempre visible -->
+    <div style="position:fixed; right:18px; bottom:18px; z-index:150; display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
+        <a href="tel:160" style="background:#dc2626; color:#fff; padding:12px 18px; border-radius:999px; font-weight:700; font-size:14px; text-decoration:none; box-shadow:0 8px 20px rgba(220,38,38,.35);">
+            <i class="fas fa-ambulance"></i> Emergencia: llamar 160
+        </a>
+        <a href="#ubicacion" style="background:#fff; color:#dc2626; border:1px solid #fecaca; padding:8px 14px; border-radius:999px; font-weight:600; font-size:12px; text-decoration:none;">
+            <i class="fas fa-map-marker-alt"></i> Cómo llegar
+        </a>
+    </div>
+
     <!-- FOOTER -->
     <footer id="contacto">
         <div class="footer-content">
@@ -397,7 +449,7 @@
                 <h4>Clínica CIES - Sedes</h4>
                 <p>Sede Central: Av. Principal #123</p>
                 <p>Sucursal Norte: Av. Las Américas #45</p>
-                <p><a href="#" style="color: var(--cies-green);">📍 Ver mapas y sucursales</a></p>
+                <p><a href="#ubicacion" style="color: var(--cies-green);">📍 Ver mapa y sucursales</a></p>
             </div>
             <div>
                 <h4>Horarios de Atención</h4>
@@ -414,8 +466,8 @@
             <div>
                 <h4>Aviso de Privacidad</h4>
                 <ul>
-                    <li><a href="#">Tratamiento de Datos de Salud Sensibles</a></li>
-                    <li><a href="#">Términos y Condiciones de Uso</a></li>
+                    <li><a href="#" onclick="openPrivacyModal(); return false;">Tratamiento de Datos de Salud Sensibles</a></li>
+                    <li><a href="#" onclick="openPrivacyModal(); return false;">Términos y Condiciones de Uso</a></li>
                 </ul>
             </div>
         </div>
@@ -463,34 +515,78 @@
         </div>
     </div>
 
-    <!-- MODAL DE REGISTRO DE PACIENTE NUEVO -->
+    <!-- MODAL DE REGISTRO DE PACIENTE NUEVO (RF003 / RN07) -->
+    @php $rerr = $errors->getBag('registro'); @endphp
     <div class="modal" id="registerModal">
-        <div class="modal-box">
+        <div class="modal-box" style="max-width: 620px; max-height: 92vh; overflow-y: auto;">
             <button class="close-btn" onclick="closeRegisterModal()">&times;</button>
             <h2 style="font-size: 22px; color: #0f172a; margin-bottom: 4px; font-weight: 700;">Crear Cuenta de Paciente</h2>
-            <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Regístrate para gestionar tus citas médicas</p>
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Regístrate para gestionar tus citas médicas. Tu usuario será tu número de CI.</p>
+
+            @if ($rerr->any())
+                <div class="error-box">{{ $rerr->first() }}</div>
+            @endif
 
             <form method="POST" action="{{ route('register') }}">
                 @csrf
-                <label>Nombre Completo</label>
-                <input type="text" name="name" required placeholder="Ej. Juan Pérez">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0 14px;">
+                    <div><label>Número de CI</label>
+                        <input type="text" name="ci" value="{{ old('ci') }}" required maxlength="10" inputmode="numeric" placeholder="Ej. 1234567"></div>
+                    <div><label>Fecha de nacimiento</label>
+                        <input type="date" name="fecnac" value="{{ old('fecnac') }}" required max="{{ now()->subDay()->toDateString() }}"></div>
+                    <div><label>Nombres</label>
+                        <input type="text" name="nombres" value="{{ old('nombres') }}" required maxlength="40" placeholder="Ej. Juan Carlos"></div>
+                    <div><label>Apellidos</label>
+                        <input type="text" name="apellidos" value="{{ old('apellidos') }}" required maxlength="40" placeholder="Ej. Pérez Mamani"></div>
+                    <div><label>Sexo</label>
+                        <select name="sexo" required class="reg-select">
+                            <option value="">Selecciona</option>
+                            <option value="F" @selected(old('sexo')==='F')>Femenino</option>
+                            <option value="M" @selected(old('sexo')==='M')>Masculino</option>
+                        </select></div>
+                    <div><label>Estado civil</label>
+                        <select name="estciv" required class="reg-select">
+                            <option value="">Selecciona</option>
+                            @foreach (['Soltero','Casado','Divorciado','Viudo','Concubino'] as $ec)
+                                <option value="{{ $ec }}" @selected(old('estciv')===$ec)>{{ $ec }}</option>
+                            @endforeach
+                        </select></div>
+                    <div><label>Teléfono / celular</label>
+                        <input type="text" name="telefono" value="{{ old('telefono') }}" required maxlength="8" inputmode="numeric" placeholder="Ej. 71234567"></div>
+                    <div><label>Correo electrónico</label>
+                        <input type="email" name="correo" value="{{ old('correo') }}" required maxlength="60" placeholder="correo@ejemplo.com"></div>
+                    <div style="grid-column: 1 / -1;"><label>Dirección</label>
+                        <input type="text" name="direccion" value="{{ old('direccion') }}" required maxlength="100" placeholder="Zona, calle y número"></div>
+                    <div><label>Contraseña</label>
+                        <input type="password" name="clave" required minlength="8" placeholder="Mínimo 8 caracteres"></div>
+                    <div><label>Confirmar contraseña</label>
+                        <input type="password" name="clave_confirmation" required minlength="8" placeholder="••••••••"></div>
+                </div>
 
-                <label>Número de CI</label>
-                <input type="text" name="ci" required placeholder="Ej. 1234567">
-
-                <label>Correo Electrónico</label>
-                <input type="email" name="email" required placeholder="correo@ejemplo.com">
-
-                <label>Contraseña</label>
-                <input type="password" name="password" required placeholder="••••••••">
-
+                <div style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; font-size: 12px; color: #475569;">
+                    <input type="checkbox" name="privacidad" value="1" required style="width:auto; margin-top:2px;" @checked(old('privacidad'))>
+                    <span>Acepto el <a href="#" onclick="openPrivacyModal(); return false;" style="color: var(--cies-green); font-weight:600;">Aviso de Privacidad</a> y autorizo el tratamiento confidencial de mis datos de salud.</span>
+                </div>
                 <div style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 16px; font-size: 12px; color: #475569;">
-                    <input type="checkbox" name="privacy_terms" required style="margin-top:2px;">
-                    <span>Acepto el <strong>Aviso de Privacidad</strong> y autorizo el tratamiento confidencial de mis datos médicos sensibles.</span>
+                    <input type="checkbox" name="terminos" value="1" required style="width:auto; margin-top:2px;" @checked(old('terminos'))>
+                    <span>Acepto los <a href="#" onclick="openPrivacyModal(); return false;" style="color: var(--cies-green); font-weight:600;">Términos y Condiciones de Uso</a>.</span>
                 </div>
 
                 <button type="submit" class="btn-submit-main">Registrar Paciente</button>
             </form>
+        </div>
+    </div>
+
+    <!-- AVISO DE PRIVACIDAD Y TÉRMINOS DE USO -->
+    <div class="modal" id="privacyModal" style="z-index: 300;">
+        <div class="modal-box" style="max-width: 560px; max-height: 85vh; overflow-y: auto; font-size: 13px; color: #334155; line-height: 1.6;">
+            <button class="close-btn" onclick="closePrivacyModal()">&times;</button>
+            <h2 style="font-size: 20px; color: #0f172a; margin-bottom: 10px; font-weight: 700;">Aviso de Privacidad y Términos de Uso</h2>
+            <p><strong>Tratamiento de datos de salud.</strong> La Clínica CIES registra tus datos personales y de salud solo para la atención médica, el agendamiento de citas, los cobros y las notificaciones del servicio. Los datos clínicos son confidenciales y solo los consulta el personal autorizado según su rol.</p>
+            <p style="margin-top:8px;"><strong>Trazabilidad.</strong> Los accesos a tu expediente y las operaciones sobre tu cuenta quedan registrados en un historial de auditoría de solo lectura.</p>
+            <p style="margin-top:8px;"><strong>Verificación.</strong> Los pagos y las entregas de insumos se confirman con firma digital y un código OTP enviado a tu correo.</p>
+            <p style="margin-top:8px;"><strong>Uso de la cuenta.</strong> Tu cuenta es personal. Eres responsable de mantener tu contraseña en reserva. La sesión se cierra tras 15 minutos de inactividad.</p>
+            <button type="button" class="btn-submit-main" style="margin-top:16px;" onclick="closePrivacyModal()">Entendido</button>
         </div>
     </div>
 
@@ -507,6 +603,8 @@
         function closeRegisterModal() {
             document.getElementById('registerModal').style.display = 'none';
         }
+        function openPrivacyModal() { document.getElementById('privacyModal').style.display = 'flex'; }
+        function closePrivacyModal() { document.getElementById('privacyModal').style.display = 'none'; }
         function switchToRegister() {
             closeLoginModal();
             openRegisterModal();
@@ -516,7 +614,15 @@
             const registerModal = document.getElementById('registerModal');
             if (event.target === loginModal) { closeLoginModal(); }
             if (event.target === registerModal) { closeRegisterModal(); }
+            if (event.target === document.getElementById('privacyModal')) { closePrivacyModal(); }
         }
+
+        // Si el servidor devolvió errores o un aviso, se reabre el modal que corresponde
+        @if ($errors->getBag('registro')->any())
+            openRegisterModal();
+        @elseif ($errors->any() || session('ok'))
+            openLoginModal();
+        @endif
     </script>
 </body>
 </html>

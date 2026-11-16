@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\Auth\CambioClaveController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RecuperacionController;
+use App\Http\Controllers\Auth\RegistroController;
 use App\Http\Controllers\Medico\DashboardController as MedicoDashboardController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -32,9 +33,9 @@ Route::middleware('guest')->group(function () {
     Route::post('/restablecer/{codUsr}', [RecuperacionController::class, 'reset'])
         ->middleware(['signed', 'throttle:5,1'])->name('password.update');
     
-    Route::post('/register', function () {
-        return back()->with('success', 'Registro de paciente procesado.');
-    })->name('register');
+    // RF003 / RN07: registro de paciente nuevo
+    Route::post('/register', [RegistroController::class, 'store'])
+        ->middleware('throttle:5,1')->name('register');
 });
 
 // 1. Protegemos todo con el middleware 'auth'
