@@ -4,12 +4,13 @@ namespace App\Http\Controllers\Paciente;
 
 use App\Http\Controllers\Controller;
 use App\Services\CitaService;
+use App\Services\InsumoService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __construct(private CitaService $citas)
+    public function __construct(private CitaService $citas, private InsumoService $insumos)
     {
     }
 
@@ -64,7 +65,11 @@ class DashboardController extends Controller
                 ->get();
         }
 
+        // RF016: comprobantes de insumos entregados por familiares
+        $insumos = $paciente ? $this->insumos->comprobantesDelPaciente($paciente->COD_PAC) : collect();
+
         return view('paciente.dashboard', [
+            'insumos'   => $insumos,
             'paciente'  => $paciente,
             'citas'     => $citas,
             'recetas'   => $recetas,
