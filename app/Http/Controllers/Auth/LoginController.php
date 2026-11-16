@@ -28,8 +28,8 @@ class LoginController extends Controller
 
         $input = trim($request->usuario);
 
-        // Buscamos únicamente por el nombre de usuario
-        $user = Usuario::where('USR_USR', $input)->first();
+        // RN01: usuario, correo, CI o código de paciente
+        $user = $this->buscarCuenta($input);
 
         $errorGenerico = ['usuario' => 'Usuario o contraseña incorrectos.'];
 
@@ -44,6 +44,16 @@ class LoginController extends Controller
         }
 
         if ($user->EST_USR !== 'Activo') {
+            // RN01: con una contraseña incorrecta el mensaje es el genérico, así no se revela el estado de la cuenta
+            if (!Hash::check($request->contrasena, $user->CON_USR)) {
+                Auditoria::registrar(
+                    'Login rechazado', 'Media', 'DOM02', 'USUARIO', $user->COD_USR,
+                    "Intento de ingreso con contraseña incorrecta a la cuenta " . strtolower($user->EST_USR) . " {$user->USR_USR}",
+                    $user
+                );
+                return back()->withErrors($errorGenerico)->onlyInput('usuario');
+            }
+
             Auditoria::registrar(
                 'Login rechazado', 'Media', 'DOM02', 'USUARIO', $user->COD_USR,
                 "Intento de ingreso de {$user->USR_USR} con cuenta " . strtolower($user->EST_USR),
@@ -94,6 +104,43 @@ class LoginController extends Controller
         );
 
         return redirect()->route('panel');
+    }
+
+    /**
+     * RN01: el dato de ingreso puede ser el nombre de usuario, el correo o el CI (del empleado o del
+     * paciente) o el código de paciente. Si el dato coincide con más de una cuenta (por ejemplo, un
+     * correo compartido), solo se acepta la coincidencia exacta por nombre de usuario.
+     */
+    private function buscarCuenta(string $dato): ?Usuario
+    {
+        if ($dato === '') {
+            return null;
+        }
+
+        $porUsuario = Usuario::where('USR_USR', $dato)->first();
+        if ($porUsuario) {
+            return $porUsuario;
+        }
+
+        $ids = Usuario::query()
+            ->leftJoin('EMPLEADO as e', 'e.COD_EMP', '=', 'USUARIO.COD_EMP')
+            ->leftJoin('PACIENTE as p', 'p.COD_PAC', '=', 'USUARIO.COD_PAC')
+            ->where(function ($q) use ($dato) {
+                $q->where('USUARIO.COD_PAC', $dato)
+                  ->orWhere('p.CI_PAC', $dato)->orWhere('p.COR_PAC', $dato)
+                  ->orWhere('e.CI_EMP', $dato)->orWhere('e.COR_EMP', $dato);
+            })
+            ->pluck('USUARIO.id')
+            ->unique();
+
+        if ($ids->count() !== 1) {
+            if ($ids->count() > 1) {
+                Log::warning('Login ambiguo: el dato coincide con varias cuentas', ['dato' => mb_substr($dato, 0, 50)]);
+            }
+            return null;
+        }
+
+        return Usuario::find($ids->first());
     }
 
     public function logout(Request $request)

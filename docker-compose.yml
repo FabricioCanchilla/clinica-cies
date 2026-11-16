@@ -39,6 +39,10 @@ services:
       COMPOSER_ALLOW_SUPERUSER: "1"
       QUARKUS_URL: http://quarkus:8080
       QUARKUS_API_KEY: cies-dev-key-cambiar
+      # Correo de Laravel (RF005: enlace de recuperación) al servidor de correo de pruebas
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: "1025"
     ports:
       - "8001:8000"
     volumes:
