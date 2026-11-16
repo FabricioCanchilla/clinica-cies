@@ -9,8 +9,8 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            DatosInicialesSeeder::class,   // roles, cargo, empleado y usuario admin
-            UsuariosPruebaSeeder::class,   // recepcion, medico, enfermeria, caja y paciente
+            DatosInicialesSeeder::class,   // roles, admin, dominios, especialidades, métodos de pago, servicios, consultorio
+            UsuariosPruebaSeeder::class,   // empleados de prueba (médico con especialidad y horario) y paciente
             DatosClinicosPruebaSeeder::class,
         ]);
     }

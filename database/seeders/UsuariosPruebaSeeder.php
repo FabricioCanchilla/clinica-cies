@@ -21,10 +21,10 @@ class UsuariosPruebaSeeder extends Seeder
             ['COD_CAR' => 'CAR0008', 'DES_CAR' => 'Auditor'],
         ]);
 
-        // [cod_emp, ci, nombre, titulo, cargo, usuario, cod_usr, rol]
+        // [cod_emp, ci, nombre, titulo, cargo, usuario, cod_usr, rol, especialidad]
         $empleados = [
             ['EMP000002', '2000001', 'Rosa',   'Lic', 'CAR0002', 'recepcion',  'USR00002', 'ROL002'],
-            ['EMP000003', '2000002', 'Carlos', 'Dr',  'CAR0003', 'medico',     'USR00003', 'ROL003'],
+            ['EMP000003', '2000002', 'Carlos', 'Dr',  'CAR0003', 'medico',     'USR00003', 'ROL003', 'ESP0001'],
             ['EMP000004', '2000003', 'Lucia',  'Lic', 'CAR0004', 'enfermeria', 'USR00004', 'ROL004'],
             ['EMP000005', '2000004', 'Pedro',  'Lic', 'CAR0005', 'caja',       'USR00005', 'ROL005'],
             ['EMP000006', '2000005', 'Sofia',  'Lic', 'CAR0006', 'laboratorio', 'USR00007', 'ROL007'],
@@ -32,7 +32,9 @@ class UsuariosPruebaSeeder extends Seeder
             ['EMP000008', '2000007', 'Elena',  'Lic', 'CAR0008', 'auditor',     'USR00009', 'ROL009'],
         ];
 
-        foreach ($empleados as [$codEmp, $ci, $nombre, $titulo, $cargo, $usr, $codUsr, $rol]) {
+        foreach ($empleados as $e) {
+            [$codEmp, $ci, $nombre, $titulo, $cargo, $usr, $codUsr, $rol] = $e;
+            $codEsp = $e[8] ?? null;
             DB::table('EMPLEADO')->insertOrIgnore([
                 'COD_EMP'    => $codEmp,
                 'CI_EMP'     => $ci,
@@ -48,7 +50,7 @@ class UsuariosPruebaSeeder extends Seeder
                 'FECING_EMP' => '2026-01-01',
                 'TURNO_EMP'  => 'Mañana',
                 'COD_CAR'    => $cargo,
-                'COD_ESP'    => null,
+                'COD_ESP'    => $codEsp,
             ]);
 
             DB::table('USUARIO')->insertOrIgnore([
@@ -59,6 +61,25 @@ class UsuariosPruebaSeeder extends Seeder
                 'COD_EMP' => $codEmp,
                 'COD_PAC' => null,
             ]);
+        }
+
+        // Horario del médico de prueba (EMP000003, Medicina General) en CON001
+        $bloques = [['08:00:00', '12:00:00'], ['14:00:00', '18:00:00']];
+        $n = 1;
+        foreach (['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'] as $dia) {
+            foreach ($bloques as [$ini, $fin]) {
+                if ($dia === 'Sábado' && $ini !== '08:00:00') {
+                    continue; // sábado solo mañana
+                }
+                DB::table('HORARIO_MEDICO')->insertOrIgnore([
+                    'COD_HOR'    => sprintf('HOR%05d', $n++),
+                    'DIA_HOR'    => $dia,
+                    'HORINI_HOR' => $ini,
+                    'HORFIN_HOR' => $fin,
+                    'COD_EMP'    => 'EMP000003',
+                    'COD_CON'    => 'CON001',
+                ]);
+            }
         }
 
         // Paciente de prueba

@@ -64,5 +64,40 @@ class DatosInicialesSeeder extends Seeder
             ['COD_DOM' => 'DOM03', 'DES_DOM' => 'Clínico'],
             ['COD_DOM' => 'DOM04', 'DES_DOM' => 'Financiero'],
         ]);
+
+        // 6. Especialidades (el agendamiento filtra médicos por COD_ESP)
+        DB::table('ESPECIALIDAD')->insertOrIgnore([
+            ['COD_ESP' => 'ESP0001', 'DES_ESP' => 'Medicina General'],
+            ['COD_ESP' => 'ESP0002', 'DES_ESP' => 'Ginecología y Obstetricia'],
+            ['COD_ESP' => 'ESP0003', 'DES_ESP' => 'Pediatría'],
+            ['COD_ESP' => 'ESP0004', 'DES_ESP' => 'Psicología'],
+            ['COD_ESP' => 'ESP0005', 'DES_ESP' => 'Odontología'],
+            ['COD_ESP' => 'ESP0006', 'DES_ESP' => 'Urología'],
+        ]);
+
+        // 7. Métodos de pago
+        DB::table('METODO_PAGO')->insertOrIgnore([
+            ['COD_MET' => 'MET0001', 'DES_MET' => 'Efectivo'],
+            ['COD_MET' => 'MET0002', 'DES_MET' => 'QR Simple'],
+            ['COD_MET' => 'MET0003', 'DES_MET' => 'Tarjeta de débito/crédito'],
+            ['COD_MET' => 'MET0004', 'DES_MET' => 'Transferencia bancaria'],
+        ]);
+
+        // 8. Clasificaciones, servicios (con precio) y consultorio
+        DB::table('CLASIFICACION_SERVICIO')->insertOrIgnore([
+            ['COD_CLA' => 'CLA0001', 'DES_CLA' => 'Consulta'],
+            ['COD_CLA' => 'CLA0002', 'DES_CLA' => 'Laboratorio'],
+        ]);
+
+        DB::table('SERVICIO')->insertOrIgnore([
+            ['COD_SRV' => 'SRV00001', 'NOM_SRV' => 'Consulta general',   'PRE_SRV' => 80.00, 'COD_CLA' => 'CLA0001'],
+            ['COD_SRV' => 'SRV00002', 'NOM_SRV' => 'Hemograma completo', 'PRE_SRV' => 60.00, 'COD_CLA' => 'CLA0002'],
+            ['COD_SRV' => 'SRV00003', 'NOM_SRV' => 'Glucosa en ayunas',  'PRE_SRV' => 25.00, 'COD_CLA' => 'CLA0002'],
+            ['COD_SRV' => 'SRV00004', 'NOM_SRV' => 'Perfil lipidico',    'PRE_SRV' => 90.00, 'COD_CLA' => 'CLA0002'],
+        ]);
+
+        DB::table('CONSULTORIO')->insertOrIgnore([
+            'COD_CON' => 'CON001', 'NOM_CON' => 'Consultorio 1', 'UBI_CON' => 'Planta baja',
+        ]);
     }
 }

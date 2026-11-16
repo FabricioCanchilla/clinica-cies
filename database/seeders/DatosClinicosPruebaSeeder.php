@@ -14,23 +14,7 @@ class DatosClinicosPruebaSeeder extends Seeder
 {
     public function run(): void
     {
-        // Catálogos
-        DB::table('CLASIFICACION_SERVICIO')->insertOrIgnore([
-            ['COD_CLA' => 'CLA0001', 'DES_CLA' => 'Consulta'],
-            ['COD_CLA' => 'CLA0002', 'DES_CLA' => 'Laboratorio'],
-        ]);
-
-        DB::table('SERVICIO')->insertOrIgnore([
-            ['COD_SRV' => 'SRV00001', 'NOM_SRV' => 'Consulta general',   'PRE_SRV' => 80.00, 'COD_CLA' => 'CLA0001'],
-            ['COD_SRV' => 'SRV00002', 'NOM_SRV' => 'Hemograma completo', 'PRE_SRV' => 60.00, 'COD_CLA' => 'CLA0002'],
-            ['COD_SRV' => 'SRV00003', 'NOM_SRV' => 'Glucosa en ayunas',  'PRE_SRV' => 25.00, 'COD_CLA' => 'CLA0002'],
-            ['COD_SRV' => 'SRV00004', 'NOM_SRV' => 'Perfil lipidico',    'PRE_SRV' => 90.00, 'COD_CLA' => 'CLA0002'],
-        ]);
-
-        DB::table('CONSULTORIO')->insertOrIgnore([
-            'COD_CON' => 'CON001', 'NOM_CON' => 'Consultorio 1', 'UBI_CON' => 'Planta baja',
-        ]);
-
+        // Clasificaciones, servicios y CON001 vienen de DatosInicialesSeeder
         DB::table('VIA_ADMIN')->insertOrIgnore([
             ['COD_VIA' => 'VIA001', 'DES_VIA' => 'Oral'],
             ['COD_VIA' => 'VIA002', 'DES_VIA' => 'Intravenosa'],
