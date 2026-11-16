@@ -188,6 +188,13 @@
             </div>
         @endif
 
+        @if (session('aviso'))
+            <div style="margin-bottom: 25px; padding: 16px; border-radius: 12px; background: #fffbeb; color: #92400e; border: 1px solid #fde68a;">
+                <i class="fas fa-triangle-exclamation"></i>
+                {{ session('aviso') }}
+            </div>
+        @endif
+
         @if ($errors->any())
             <div style="margin-bottom: 25px; padding: 16px; border-radius: 12px; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca;">
                 <i class="fas fa-circle-exclamation"></i>
@@ -362,6 +369,27 @@
                                         <i class="fas fa-lock"></i>
                                         Pagar anticipo
                                     </a>
+                                @endif
+
+                                @if ($cita->NRO_COM_ANT)
+                                    <a href="{{ route('paciente.citas.comprobante', $cita->COD_CIT) }}" target="_blank"
+                                       style="display: inline-block; margin-left: 8px; background: #eef2ff; color: #3730a3;
+                                              padding: 5px 12px; border-radius: 999px; text-decoration: none;
+                                              font-size: 13px; font-weight: 600; white-space: nowrap;">
+                                        <i class="fas fa-file-pdf"></i>
+                                        Comprobante {{ $cita->NRO_COM_ANT }}
+                                    </a>
+                                @elseif ((int) $cita->ANTICIPOS > 0)
+                                    <form method="POST" action="{{ route('paciente.citas.comprobante.reintentar', $cita->COD_CIT) }}" style="display: inline;">
+                                        @csrf
+                                        <button type="submit"
+                                                style="margin-left: 8px; background: #fef3c7; color: #92400e; border: 1px solid #fde68a;
+                                                       padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
+                                                       cursor: pointer; white-space: nowrap;">
+                                            <i class="fas fa-rotate-right"></i>
+                                            Reintentar comprobante
+                                        </button>
+                                    </form>
                                 @endif
                             </td>
 

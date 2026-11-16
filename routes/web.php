@@ -13,6 +13,7 @@ use App\Http\Controllers\Farmacia\RecetaController as FarmRecetaController;
 use App\Http\Controllers\Farmacia\LoteController as FarmLoteController;
 use App\Http\Controllers\Paciente\DashboardController as PacienteDashboardController;
 use App\Http\Controllers\Paciente\CitaController as PacienteCitaController;
+use App\Http\Controllers\Caja\CajaController;
 
 Route::get('/', fn () => redirect()->route('panel'));
 
@@ -147,13 +148,28 @@ foreach ($secciones as $slug => $titulo) {
         Route::get('/citas/{codCit}/pagar', [PacienteCitaController::class, 'pagar'])->name('citas.pagar');
         Route::post('/citas/{codCit}/otp', [PacienteCitaController::class, 'enviarOtp'])->name('citas.otp');
         Route::post('/citas/{codCit}/pagar', [PacienteCitaController::class, 'confirmar'])->name('citas.confirmar');
+
+        // Fase 5: comprobante del anticipo (Quarkus) y reintento si falló después del pago
+        Route::post('/citas/{codCit}/comprobante', [PacienteCitaController::class, 'reintentarComprobante'])->name('citas.comprobante.reintentar');
+        Route::get('/citas/{codCit}/comprobante', [PacienteCitaController::class, 'comprobantePdf'])->name('citas.comprobante');
+    });
+
+    // Panel de Caja (ROL005), RF039: apertura, cobros, anulación y cierre
+    Route::middleware('rol:ROL005')->prefix('caja')->name('caja.')->group(function () {
+        Route::get('/', [CajaController::class, 'index'])->name('dashboard');
+        Route::post('/abrir', [CajaController::class, 'abrir'])->name('abrir');
+        Route::post('/cerrar', [CajaController::class, 'cerrar'])->name('cerrar');
+        Route::get('/citas/{codCit}/cobrar', [CajaController::class, 'formCobro'])->name('cobrar');
+        Route::post('/citas/{codCit}/cobrar', [CajaController::class, 'cobrar'])->name('cobrar.guardar');
+        Route::post('/pagos/{codPag}/comprobante', [CajaController::class, 'reintentar'])->name('comprobante.reintentar');
+        Route::post('/comprobantes/{nroCom}/anular', [CajaController::class, 'anular'])->name('anular');
+        Route::get('/comprobantes/{nroCom}/pdf', [CajaController::class, 'pdf'])->name('pdf');
     });
 
     // 4. Panel de los demás roles
     $otros = [
         'ROL002' => 'recepcion',
         'ROL004' => 'enfermeria',
-        'ROL005' => 'caja',
     ];
 
     foreach ($otros as $codigo => $slug) {
