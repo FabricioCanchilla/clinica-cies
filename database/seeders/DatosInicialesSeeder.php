@@ -99,5 +99,12 @@ class DatosInicialesSeeder extends Seeder
         DB::table('CONSULTORIO')->insertOrIgnore([
             'COD_CON' => 'CON001', 'NOM_CON' => 'Consultorio 1', 'UBI_CON' => 'Planta baja',
         ]);
+
+        // Aseguradoras para la validación de seguros en recepción (RF038)
+        DB::table('ASEGURADORA')->insertOrIgnore([
+            ['COD_ASE' => 'ASE0001', 'DES_ASE' => 'Seguro privado de prueba A'],
+            ['COD_ASE' => 'ASE0002', 'DES_ASE' => 'Seguro privado de prueba B'],
+            ['COD_ASE' => 'ASE0003', 'DES_ASE' => 'Seguro de convenio institucional'],
+        ]);
     }
 }

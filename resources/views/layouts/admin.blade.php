@@ -305,6 +305,13 @@
                 <a href="{{ route('enfermeria.insumos.crear') }}" class="{{ request()->routeIs('enfermeria.insumos.crear') ? 'activo' : '' }}">
                     <i class="fas fa-plus"></i> Registrar insumo
                 </a>
+            @elseif (auth()->user()->COD_ROL === 'ROL002')
+                <a href="{{ route('recepcion.dashboard') }}" class="{{ request()->routeIs('recepcion.dashboard') ? 'activo' : '' }}">
+                    <i class="fas fa-clipboard-check"></i> Citas de hoy
+                </a>
+                <a href="{{ route('recepcion.pacientes') }}" class="{{ request()->routeIs('recepcion.pacientes*', 'recepcion.paciente', 'recepcion.reprogramar') ? 'activo' : '' }}">
+                    <i class="fas fa-users"></i> Pacientes
+                </a>
             @elseif (auth()->user()->COD_ROL === 'ROL005')
                 <a href="{{ route('caja.dashboard') }}" class="activo">
                     <i class="fas fa-cash-register"></i> Caja
