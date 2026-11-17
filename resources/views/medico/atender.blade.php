@@ -43,6 +43,85 @@
                               class="w-full border border-slate-300 rounded-lg px-3 py-2">{{ old('evolucion') }}</textarea>
                     <p class="text-xs text-slate-500 mt-1">RF020: las notas de evolución no se eliminan; las correcciones se hacen con una nota nueva (adenda).</p>
                 </div>
+                <div class="border-t border-slate-200 pt-4">
+                    <h2 class="font-bold text-slate-800 mb-2"><i class="fas fa-allergies text-red-500"></i> Alergia detectada en esta consulta (opcional)</h2>
+                    <div class="grid grid-cols-3 gap-3">
+                        <input name="alergia_des" maxlength="60" value="{{ old('alergia_des') }}" placeholder="Ej. Penicilina"
+                               class="col-span-2 border border-slate-300 rounded-lg px-3 py-2">
+                        <select name="alergia_sev" class="border border-slate-300 rounded-lg px-3 py-2">
+                            <option value="">Severidad</option>
+                            @foreach (['Leve', 'Moderada', 'Grave'] as $sev)
+                                <option value="{{ $sev }}" @selected(old('alergia_sev') === $sev)>{{ $sev }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-200 pt-4">
+                    <h2 class="font-bold text-slate-800 mb-2"><i class="fas fa-prescription text-emerald-600"></i> Receta (RF018, opcional)</h2>
+                    <div class="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 mb-1">
+                        <div class="col-span-4">Medicamento</div><div class="col-span-2">Dosis</div><div class="col-span-2">Vía</div>
+                        <div class="col-span-2">Cada (h)</div><div class="col-span-2">Días</div>
+                    </div>
+                    @for ($i = 0; $i < 4; $i++)
+                        <div class="grid grid-cols-12 gap-2 mb-2">
+                            <select name="items[{{ $i }}][med]" class="col-span-4 border border-slate-300 rounded-lg px-2 py-2 text-sm">
+                                <option value="">—</option>
+                                @foreach ($medicamentos as $m)
+                                    <option value="{{ $m->COD_MED }}" @selected(old("items.$i.med") === $m->COD_MED)>{{ $m->DES_MED }}</option>
+                                @endforeach
+                            </select>
+                            <input name="items[{{ $i }}][dosis]" maxlength="20" value="{{ old("items.$i.dosis") }}" placeholder="1 tableta"
+                                   class="col-span-2 border border-slate-300 rounded-lg px-2 py-2 text-sm">
+                            <select name="items[{{ $i }}][via]" class="col-span-2 border border-slate-300 rounded-lg px-2 py-2 text-sm">
+                                @foreach ($vias as $v)
+                                    <option value="{{ $v->COD_VIA }}" @selected(old("items.$i.via") === $v->COD_VIA)>{{ $v->DES_VIA }}</option>
+                                @endforeach
+                            </select>
+                            <input type="number" min="1" max="72" name="items[{{ $i }}][frecuencia]" value="{{ old("items.$i.frecuencia") }}" placeholder="8"
+                                   class="col-span-2 border border-slate-300 rounded-lg px-2 py-2 text-sm">
+                            <input type="number" min="1" max="365" name="items[{{ $i }}][duracion]" value="{{ old("items.$i.duracion") }}" placeholder="5"
+                                   class="col-span-2 border border-slate-300 rounded-lg px-2 py-2 text-sm">
+                        </div>
+                    @endfor
+                    <input name="obs_receta" maxlength="200" value="{{ old('obs_receta') }}" placeholder="Indicaciones generales de la receta"
+                           class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mt-1">
+
+                    @if (session('alerta_alergia') || $errors->has('justificacion'))
+                        <div class="mt-3 rounded-xl border border-red-300 bg-red-50 p-3">
+                            <p class="text-sm font-bold text-red-800"><i class="fas fa-exclamation-triangle"></i> Alerta de alergia (RN42)</p>
+                            <ul class="text-sm text-red-800 list-disc ml-5">
+                                @foreach ((array) session('alerta_alergia') as $al)
+                                    <li>{{ $al }}</li>
+                                @endforeach
+                            </ul>
+                            <label class="block text-sm font-semibold mt-2 mb-1" for="justificacion">Justificación para prescribir de todos modos</label>
+                            <input id="justificacion" name="justificacion" maxlength="200" value="{{ old('justificacion') }}"
+                                   class="w-full border border-red-300 rounded-lg px-3 py-2">
+                        </div>
+                    @endif
+                </div>
+
+                <div class="border-t border-slate-200 pt-4">
+                    <h2 class="font-bold text-slate-800 mb-2"><i class="fas fa-vials text-emerald-600"></i> Exámenes (RF019, opcional)</h2>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        @foreach ($examenes as $ex)
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" name="examenes[]" value="{{ $ex->COD_SRV }}" @checked(in_array($ex->COD_SRV, old('examenes', []), true))>
+                                {{ $ex->NOM_SRV }} <span class="text-xs text-slate-400">({{ $ex->DES_CLA }})</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <input name="indicaciones" maxlength="200" value="{{ old('indicaciones') }}" placeholder="Indicaciones clínicas de la orden"
+                               class="col-span-2 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                        <select name="prioridad" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="Normal" @selected(old('prioridad') !== 'Urgente')>Normal</option>
+                            <option value="Urgente" @selected(old('prioridad') === 'Urgente')>Urgente</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="flex gap-3">
                     <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-lg">
                         <i class="fas fa-check"></i> Guardar y marcar como atendida
@@ -53,6 +132,13 @@
         </section>
 
         <aside class="bg-white rounded-2xl border border-slate-200 p-6">
+            <h2 class="font-bold text-red-700 mb-2"><i class="fas fa-allergies"></i> Alergias</h2>
+            @forelse ($alergias as $a)
+                <p class="text-sm"><strong>{{ $a->DES_ALE }}</strong> <span class="text-xs text-red-600">({{ $a->SEV_ALE }})</span></p>
+            @empty
+                <p class="text-xs text-slate-500 mb-2">Sin alergias registradas.</p>
+            @endforelse
+            <hr class="my-3">
             <h2 class="font-bold text-slate-800 mb-2"><i class="fas fa-file-medical text-emerald-600"></i> Historia clínica</h2>
             @if ($historia)
                 <p class="text-xs text-slate-500 mb-3">{{ $historia->NRO_HIS }} · abierta el {{ \Carbon\Carbon::parse($historia->FECAPE_HIS)->format('d/m/Y') }}</p>

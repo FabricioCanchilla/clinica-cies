@@ -115,16 +115,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/pacientes', [PacienteController::class, 'index'])
     ->name('pacientes');
 
-$secciones = [
-    'citas'       => 'Citas',
-    'caja'        => 'Caja',
-    'internacion' => 'Internación',
-];
-
-foreach ($secciones as $slug => $titulo) {
-    Route::get("/$slug", fn () => view('admin.pendiente', ['titulo' => $titulo]))
-        ->name($slug);
-}
+        // Supervisión (solo lectura): citas, caja e internación
+        Route::get('/citas', [\App\Http\Controllers\Admin\SupervisionController::class, 'citas'])->name('citas');
+        Route::get('/caja', [\App\Http\Controllers\Admin\SupervisionController::class, 'caja'])->name('caja');
+        Route::get('/internacion', [\App\Http\Controllers\Admin\SupervisionController::class, 'internacion'])->name('internacion');
 }); // Cierre del grupo administrativo
 
     // 3. Panel de Médico
@@ -180,6 +174,9 @@ foreach ($secciones as $slug => $titulo) {
         Route::post('/citas/{codCit}/cancelar', [PacienteCitaController::class, 'cancelar'])->name('citas.cancelar');
         Route::get('/citas/{codCit}/reprogramar', [PacienteCitaController::class, 'reprogramarForm'])->name('citas.reprogramar');
         Route::post('/citas/{codCit}/reprogramar', [PacienteCitaController::class, 'reprogramar'])->name('citas.reprogramar.guardar');
+
+        // RF011: receta en PDF
+        Route::get('/recetas/{codRec}/pdf', [PacienteDashboardController::class, 'recetaPdf'])->name('recetas.pdf');
 
         // RF014: mi perfil
         Route::post('/perfil', [PacienteDashboardController::class, 'actualizarPerfil'])->name('perfil.actualizar');
