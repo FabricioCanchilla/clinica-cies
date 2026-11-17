@@ -210,16 +210,23 @@ foreach ($secciones as $slug => $titulo) {
         Route::get('/comprobantes/{nroCom}/pdf', [CajaController::class, 'pdf'])->name('pdf');
     });
 
-    // 4. Panel de los demás roles
-    $otros = [
-        'ROL002' => 'recepcion',
-    ];
-
-    foreach ($otros as $codigo => $slug) {
-        Route::middleware("rol:$codigo")->group(function () use ($slug) {
-            Route::get("/$slug", fn () => view('pendiente'))->name("$slug.dashboard");
-        });
-    }
+    // Panel de Recepción (ROL002): RF036 pacientes, RF037 check-in y disponibilidad, RF038 seguros y agendas
+    Route::middleware('rol:ROL002')->prefix('recepcion')->name('recepcion.')->group(function () {
+        $rc = \App\Http\Controllers\Recepcion\RecepcionController::class;
+        Route::get('/', [$rc, 'index'])->name('dashboard');
+        Route::get('/pacientes', [$rc, 'pacientes'])->name('pacientes');
+        Route::get('/pacientes/crear', [$rc, 'crearPaciente'])->name('pacientes.crear');
+        Route::post('/pacientes', [$rc, 'guardarPaciente'])->name('pacientes.guardar');
+        Route::get('/pacientes/{codPac}', [$rc, 'paciente'])->name('paciente');
+        Route::post('/pacientes/{codPac}/seguros', [$rc, 'guardarSeguro'])->name('seguros.guardar');
+        Route::post('/seguros/{codSeg}/revalidar', [$rc, 'revalidarSeguro'])->name('seguros.revalidar');
+        Route::post('/citas/{codCit}/checkin', [$rc, 'checkin'])->name('checkin');
+        Route::post('/citas/{codCit}/inasistencia', [$rc, 'inasistencia'])->name('inasistencia');
+        Route::post('/citas/{codCit}/cancelar', [$rc, 'cancelarCita'])->name('cancelar');
+        Route::get('/citas/{codCit}/reprogramar', [$rc, 'reprogramarForm'])->name('reprogramar');
+        Route::post('/citas/{codCit}/reprogramar', [$rc, 'reprogramar'])->name('reprogramar.guardar');
+        Route::get('/horarios', [$rc, 'horarios'])->name('horarios');
+    });
         // Auditoría: la ven el administrador y el auditor
     Route::middleware('rol:ROL001,ROL009')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria');
