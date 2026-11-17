@@ -1,23 +1,10 @@
 <?php
-use App\Http\Controllers\Admin\PacienteController;
-use App\Http\Controllers\Admin\AuditoriaController;
-use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\Auth\CambioClaveController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RecuperacionController;
 use App\Http\Controllers\Auth\RegistroController;
-use App\Http\Controllers\Medico\DashboardController as MedicoDashboardController;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\EmpleadoController;
 use App\Http\Controllers\Laboratorio\OrdenController as LabOrdenController;
-use App\Http\Controllers\Farmacia\RecetaController as FarmRecetaController;
-use App\Http\Controllers\Farmacia\LoteController as FarmLoteController;
-use App\Http\Controllers\Paciente\DashboardController as PacienteDashboardController;
-use App\Http\Controllers\Paciente\CitaController as PacienteCitaController;
-use App\Http\Controllers\Caja\CajaController;
-use App\Http\Controllers\Enfermeria\InsumoController;
-
 Route::get('/', fn () => redirect()->route('panel'));
 
 Route::middleware('guest')->group(function () {
@@ -36,6 +23,8 @@ Route::middleware('guest')->group(function () {
     // RF003 / RN07: registro de paciente nuevo
     Route::post('/register', [RegistroController::class, 'store'])
         ->middleware('throttle:5,1')->name('register');
+    Route::get('/activar-paciente/{paciente}', [\App\Http\Controllers\Auth\ActivacionPacienteController::class, 'form'])->middleware('signed')->name('paciente.activacion.form');
+    Route::post('/activar-paciente/{paciente}', [\App\Http\Controllers\Auth\ActivacionPacienteController::class, 'activar'])->middleware(['signed', 'throttle:5,1'])->name('paciente.activacion.guardar');
 });
 
 // 1. Protegemos todo con el middleware 'auth'
@@ -45,6 +34,7 @@ Route::middleware('auth')->group(function () {
 
     // Bandeja de notificaciones del usuario (RN46 alertas críticas)
     Route::get('/notificaciones', [\App\Http\Controllers\Comun\NotificacionController::class, 'index'])->name('notificaciones');
+    Route::get('/resultados/{codRes}/archivo', [LabOrdenController::class, 'archivo'])->name('resultados.archivo');
 
     Route::get('/cambiar-clave', [CambioClaveController::class, 'form'])->name('clave.cambiar');
     Route::post('/cambiar-clave', [CambioClaveController::class, 'actualizar'])->name('clave.actualizar');
@@ -73,146 +63,13 @@ Route::middleware('auth')->group(function () {
     })->name('panel');
 
     // 2. Panel de Administrador
-    Route::middleware('rol:ROL001')->prefix('admin')->name('admin.')->group(function () {
-        
-        Route::get('/', function () {
-            $totales = [
-                'Usuarios'  => DB::table('usuario')->count(),
-                'Empleados' => DB::table('empleado')->count(),
-                'Pacientes' => DB::table('paciente')->count(),
-                'Citas'     => DB::table('cita')->count(),
-            ];
-
-            $ultimos = DB::table('usuario')
-                ->join('rol', 'usuario.COD_ROL', '=', 'rol.COD_ROL')
-                ->select('usuario.USR_USR', 'usuario.EST_USR', 'usuario.FECULT_USR', 'rol.DES_ROL')
-                ->orderByDesc('usuario.id')
-                ->limit(5)
-                ->get();
-
-            return view('admin.dashboard', compact('totales', 'ultimos'));
-        })->name('dashboard');
-
-        Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios');
-        Route::get('/usuarios/crear', [UsuarioController::class, 'create'])->name('usuarios.crear');
-        Route::post('/usuarios', [UsuarioController::class, 'store'])->name('usuarios.guardar');
-        Route::get('/usuarios/{codUsr}/editar', [UsuarioController::class, 'edit'])->name('usuarios.editar');
-        Route::put('/usuarios/{codUsr}', [UsuarioController::class, 'update'])->name('usuarios.actualizar');
-        Route::post('/usuarios/{codUsr}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.estado');
-        Route::post('/usuarios/{codUsr}/reset-clave', [UsuarioController::class, 'resetClave'])->name('usuarios.reset');
-        Route::get('/empleados', [EmpleadoController::class, 'index'])->name('empleados');
-        Route::get('/empleados/crear', [EmpleadoController::class, 'create'])->name('empleados.crear');
-        Route::post('/empleados', [EmpleadoController::class, 'store'])->name('empleados.guardar');
-        Route::get('/empleados/{codEmp}/editar', [EmpleadoController::class, 'edit'])->name('empleados.editar');
-        Route::put('/empleados/{codEmp}', [EmpleadoController::class, 'update'])->name('empleados.actualizar');
-        Route::get('/pacientes', [PacienteController::class, 'index'])
-    ->name('pacientes');
-
-$secciones = [
-    'citas'       => 'Citas',
-    'caja'        => 'Caja',
-    'internacion' => 'Internación',
-];
-
-foreach ($secciones as $slug => $titulo) {
-    Route::get("/$slug", fn () => view('admin.pendiente', ['titulo' => $titulo]))
-        ->name($slug);
-}
-}); // Cierre del grupo administrativo
-
-    // 3. Panel de Médico
-    Route::middleware('rol:ROL003')->prefix('medico')->name('medico.')->group(function () {
-        Route::get('/', [MedicoDashboardController::class, 'index'])->name('dashboard');
-    });
-    // Panel de Laboratorio (ROL007)
-    Route::middleware('rol:ROL007')->prefix('laboratorio')->name('laboratorio.')->group(function () {
-        Route::get('/', [LabOrdenController::class, 'index'])->name('dashboard');
-        Route::post('/ordenes/{codOrd}/avanzar', [LabOrdenController::class, 'avanzar'])->name('avanzar');
-        Route::post('/ordenes/{codOrd}/cancelar', [LabOrdenController::class, 'cancelar'])->name('cancelar');
-        Route::get('/ordenes/{codOrd}/resultado', [LabOrdenController::class, 'formResultado'])->name('resultado');
-        Route::post('/ordenes/{codOrd}/resultado', [LabOrdenController::class, 'guardarResultado'])->name('resultado.guardar');
-        Route::post('/ordenes/{codOrd}/validar', [LabOrdenController::class, 'validar'])->name('validar');
-        Route::post('/ordenes/{codOrd}/publicar', [LabOrdenController::class, 'publicar'])->name('publicar');
-    });
-        // Panel de Farmacia (ROL008)
-    Route::middleware('rol:ROL008')->prefix('farmacia')->name('farmacia.')->group(function () {
-        Route::get('/', [FarmRecetaController::class, 'index'])->name('dashboard');
-        Route::get('/recetas/{codRec}', [FarmRecetaController::class, 'show'])->name('receta');
-        Route::post('/recetas/{codRec}/items/{codDre}/despachar', [FarmRecetaController::class, 'despachar'])->name('despachar');
-
-        Route::get('/lotes', [FarmLoteController::class, 'index'])->name('lotes');
-        Route::post('/lotes', [FarmLoteController::class, 'entrada'])->name('lotes.entrada');
-        Route::get('/lotes/{codLot}/baja', [FarmLoteController::class, 'formBaja'])->name('lotes.baja');
-        Route::post('/lotes/{codLot}/baja', [FarmLoteController::class, 'guardarBaja'])->name('lotes.baja.guardar');
-    });
-
-    // Panel del paciente (ROL006): sus datos, sus citas, agendamiento y pago con OTP
-    Route::middleware('rol:ROL006')->prefix('paciente')->name('paciente.')->group(function () {
-        Route::get('/', [PacienteDashboardController::class, 'index'])->name('dashboard');
-
-        // RF007: agendar
-        Route::get('/citas/crear', [PacienteCitaController::class, 'create'])->name('citas.crear');
-        Route::get('/citas/horarios', [PacienteCitaController::class, 'horarios'])->name('citas.horarios');
-        Route::post('/citas', [PacienteCitaController::class, 'store'])->name('citas.guardar');
-
-        // RF008: pagar el anticipo con OTP
-        Route::get('/citas/{codCit}/pagar', [PacienteCitaController::class, 'pagar'])->name('citas.pagar');
-        Route::post('/citas/{codCit}/otp', [PacienteCitaController::class, 'enviarOtp'])->name('citas.otp');
-        Route::post('/citas/{codCit}/pagar', [PacienteCitaController::class, 'confirmar'])->name('citas.confirmar');
-
-        // Fase 5: comprobante del anticipo (Quarkus) y reintento si falló después del pago
-        Route::post('/citas/{codCit}/comprobante', [PacienteCitaController::class, 'reintentarComprobante'])->name('citas.comprobante.reintentar');
-        Route::get('/citas/{codCit}/comprobante', [PacienteCitaController::class, 'comprobantePdf'])->name('citas.comprobante');
-        // RF016: comprobantes de los insumos que entregaron sus familiares
-        Route::get('/insumos/{nroCen}/comprobante', [PacienteCitaController::class, 'comprobanteInsumoPdf'])->name('insumos.comprobante');
-    });
-
-    // Panel de Enfermería (ROL004): RF031 recepción de insumos y RF032 firma + OTP + comprobante (RN36)
-    Route::middleware('rol:ROL004')->prefix('enfermeria')->name('enfermeria.')->group(function () {
-        Route::get('/', [InsumoController::class, 'index'])->name('dashboard');
-        Route::get('/insumos/crear', [InsumoController::class, 'create'])->name('insumos.crear');
-        Route::post('/insumos', [InsumoController::class, 'store'])->name('insumos.guardar');
-        Route::get('/insumos/{codIns}/verificar', [InsumoController::class, 'verificarForm'])->name('insumos.verificar');
-        Route::post('/insumos/{codIns}/otp', [InsumoController::class, 'enviarOtp'])->name('insumos.otp');
-        Route::post('/insumos/{codIns}/verificar', [InsumoController::class, 'verificar'])->name('insumos.verificar.guardar');
-        Route::post('/insumos/{codIns}/comprobante', [InsumoController::class, 'reintentar'])->name('insumos.comprobante');
-        Route::get('/insumos/{codIns}/firma', [InsumoController::class, 'firma'])->name('insumos.firma');
-        Route::get('/comprobantes/{nroCen}/pdf', [InsumoController::class, 'pdf'])->name('insumos.pdf');
-    });
-
-    // Panel de Caja (ROL005), RF039: apertura, cobros, anulación y cierre
-    Route::middleware('rol:ROL005')->prefix('caja')->name('caja.')->group(function () {
-        Route::get('/', [CajaController::class, 'index'])->name('dashboard');
-        Route::post('/abrir', [CajaController::class, 'abrir'])->name('abrir');
-        Route::post('/cerrar', [CajaController::class, 'cerrar'])->name('cerrar');
-        Route::get('/citas/{codCit}/cobrar', [CajaController::class, 'formCobro'])->name('cobrar');
-        Route::post('/citas/{codCit}/cobrar', [CajaController::class, 'cobrar'])->name('cobrar.guardar');
-        Route::post('/pagos/{codPag}/comprobante', [CajaController::class, 'reintentar'])->name('comprobante.reintentar');
-        Route::post('/comprobantes/{nroCom}/anular', [CajaController::class, 'anular'])->name('anular');
-        Route::get('/comprobantes/{nroCom}/pdf', [CajaController::class, 'pdf'])->name('pdf');
-    });
-
-    // 4. Panel de los demás roles
-    $otros = [
-        'ROL002' => 'recepcion',
-    ];
-
-    foreach ($otros as $codigo => $slug) {
-        Route::middleware("rol:$codigo")->group(function () use ($slug) {
-            Route::get("/$slug", fn () => view('pendiente'))->name("$slug.dashboard");
-        });
-    }
-        // Auditoría: la ven el administrador y el auditor
-    Route::middleware('rol:ROL001,ROL009')->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria');
-    });
-
-    // El auditor entra directo a la auditoría
-    Route::middleware('rol:ROL009')->get('/auditor', fn () => redirect()->route('admin.auditoria'))
-        ->name('auditor.dashboard');
-        Route::get('/admin/auditoria/excel', [\App\Http\Controllers\Admin\AuditoriaController::class, 'excel'])
-    ->name('admin.auditoria.excel')->middleware('rol:ROL001,ROL009');
-
-Route::get('/admin/auditoria/pdf', [\App\Http\Controllers\Admin\AuditoriaController::class, 'pdf'])
-    ->name('admin.auditoria.pdf')->middleware('rol:ROL001,ROL009');
+    require __DIR__.'/administracion.php';
+    require __DIR__.'/medico.php';
+    require __DIR__.'/laboratorio.php';
+    require __DIR__.'/farmacia.php';
+    require __DIR__.'/paciente.php';
+    require __DIR__.'/enfermeria.php';
+    require __DIR__.'/caja.php';
+    require __DIR__.'/recepcion.php';
+    require __DIR__.'/auditoria.php';
 });

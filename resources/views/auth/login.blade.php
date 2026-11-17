@@ -277,11 +277,7 @@
     <!-- BARRA SUPERIOR -->
     <header class="header">
         <div class="logo-container">
-            <div class="logo-badge"><i class="fas fa-plus"></i></div>
-            <div>
-                <div class="logo-title">Clínica CIES</div>
-                <div class="logo-subtitle">Salud Integral y Especializada</div>
-            </div>
+            <x-brand-logo :width="170" />
         </div>
 
         <ul class="nav-links">
@@ -496,7 +492,7 @@
                 <input type="text" name="usuario" value="{{ old('usuario') }}" placeholder="Ej. usuario@correo.com o CI" required autofocus>
 
                 <label>Contraseña</label>
-                <input type="password" name="contrasena" placeholder="••••••••" required>
+                <div style="position:relative"><input id="contrasena-login" type="password" name="contrasena" autocomplete="current-password" style="padding-right:48px" required><button type="button" id="alternar-contrasena" aria-label="Mostrar contraseña" title="Mostrar contraseña" aria-controls="contrasena-login" aria-pressed="false" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);cursor:pointer;padding:8px;border:0;background:transparent;color:#64748b"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path id="ojo-tachado" d="M3 3 21 21" style="display:none"/></svg></button></div>
 
                 <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 12px;">
                     <a href="{{ route('password.request') }}" style="color: var(--cies-green); text-decoration: none;">¿Olvidaste tu contraseña?</a>
@@ -560,7 +556,7 @@
                     <div><label>Contraseña</label>
                         <input type="password" name="clave" required minlength="8" placeholder="Mínimo 8 caracteres"></div>
                     <div><label>Confirmar contraseña</label>
-                        <input type="password" name="clave_confirmation" required minlength="8" placeholder="••••••••"></div>
+                        <input type="password" name="clave_confirmation" required minlength="8"></div>
                 </div>
 
                 <div style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; font-size: 12px; color: #475569;">
@@ -624,5 +620,8 @@
             openLoginModal();
         @endif
     </script>
-</body>
+<script>
+const botonClave = document.getElementById('alternar-contrasena');
+botonClave.addEventListener('click', () => { const campo = document.getElementById('contrasena-login'); const visible = campo.type === 'password'; campo.type = visible ? 'text' : 'password'; botonClave.setAttribute('aria-pressed', String(visible)); botonClave.setAttribute('aria-label', visible ? 'Ocultar contraseña' : 'Mostrar contraseña'); botonClave.title = visible ? 'Ocultar contraseña' : 'Mostrar contraseña'; document.getElementById('ojo-tachado').style.display = visible ? '' : 'none'; });
+</script></body>
 </html>

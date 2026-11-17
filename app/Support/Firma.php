@@ -25,13 +25,20 @@ class Firma
             || !str_starts_with($png, "\x89PNG\r\n\x1a\n")) {
             throw new DomainException("La firma no es válida. Pide a {$quien} que firme de nuevo.");
         }
+        $imagen = @getimagesizefromstring($png);
+        if (!$imagen || ($imagen[2] ?? null) !== IMAGETYPE_PNG || $imagen[0] < 32 || $imagen[1] < 16
+            || !str_ends_with($png, "\x00\x00\x00\x00IEND\xaeB\x60\x82")) {
+            throw new DomainException("La firma no es una imagen PNG válida. Pide a {$quien} que firme de nuevo.");
+        }
         return $png;
     }
 
     /** Guarda la imagen en el disco privado y devuelve la ruta que va a la BD. */
     public static function guardar(string $png, string $ruta): string
     {
-        Storage::disk('local')->put($ruta, $png);
+        if (!Storage::disk('local')->put($ruta, $png)) {
+            throw new DomainException('No se pudo guardar la firma. Intenta nuevamente.');
+        }
         return $ruta;
     }
 

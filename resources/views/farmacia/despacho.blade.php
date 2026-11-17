@@ -37,10 +37,12 @@
                             {{ $i->DOS_DRE }} · {{ $i->DES_VIA }}
                             <div style="color: var(--suave); font-size: 12px;">cada {{ $i->FRE_DRE }} h por {{ $i->DUR_DRE }} días</div>
                         </td>
-                        <td>{{ $i->requeridas }}</td>
+                        <td>{{ $i->requeridas ?? 'Por confirmar' }}</td>
                         <td>{{ (int) $i->CANENT_DRE }}</td>
                         <td>
-                            @if ($i->pendientes === 0)
+                            @if ($i->pendientes === null)
+                                Por confirmar
+                            @elseif ($i->pendientes === 0)
                                 <span class="badge activo">Completo</span>
                             @else
                                 {{ $i->pendientes }}
@@ -54,15 +56,14 @@
                             @endif
                         </td>
                         <td style="white-space: nowrap;">
-                            @if ($receta->EST_REC === 'Activa' && $i->pendientes > 0 && $i->stock > 0)
-                                <form method="POST" action="{{ route('farmacia.despachar', [$receta->COD_REC, $i->COD_DRE]) }}"
-                                      style="display: inline-flex; gap: 8px; align-items: center;">
-                                    @csrf
-                                    <input type="number" name="cantidad" min="1" max="{{ $i->pendientes }}"
-                                           value="{{ min($i->pendientes, $i->stock) }}"
-                                           style="width: 90px; padding: 7px 10px; border: 1px solid var(--borde-input); border-radius: 8px;">
-                                    <button type="submit" class="btn principal">Entregar</button>
+                            @if ($receta->EST_REC === 'Activa' && $i->pendientes === null)
+                                <form method="POST" action="{{ route('farmacia.cantidad', [$receta->COD_REC, $i->COD_DRE]) }}" style="white-space:normal;min-width:220px">@csrf
+                                    <label>Cantidad total de unidades <input type="number" name="cantidad" min="1" max="32000" required></label>
+                                    <label><input type="checkbox" name="confirmacion" value="1" required> Confirmo la cantidad indicada en la receta o aclarada por el médico.</label>
+                                    <button class="btn principal">Confirmar cantidad</button>
                                 </form>
+                            @elseif ($receta->EST_REC === 'Activa' && $i->pendientes > 0 && $i->stock > 0)
+                                Cobro y entrega en caja
                             @else
                                 —
                             @endif
@@ -73,6 +74,6 @@
         </table>
     </div>
 
-    <p class="sub">Unidades requeridas = (24 ÷ frecuencia en horas) × días. El stock se descuenta del lote que vence primero (PEPS); los lotes vencidos no se usan.</p>
+    <p class="sub">Antes de entregar, confirma la cantidad total de unidades indicada en la receta. Si no está clara, consúltala con el médico. El stock se descuenta del lote vigente que vence primero.</p>
     <a href="{{ route('farmacia.dashboard') }}" class="btn">← Volver a recetas</a>
 @endsection

@@ -47,10 +47,14 @@ class LaboratorioService
             ->join('HISTORIA_CLINICA as h', 'h.COD_HIS', '=', 'c.COD_HIS')
             ->join('PACIENTE as p', 'p.COD_PAC', '=', 'h.COD_PAC')
             ->leftJoin('RESULTADO_EXAMEN as r', 'r.COD_ORD', '=', 'o.COD_ORD')
+            ->leftJoin('LAB_MUESTRA as muestra', 'muestra.COD_ORD', '=', 'o.COD_ORD')
+            ->leftJoin('LAB_VALIDACION as validacion', 'validacion.COD_RES', '=', 'r.COD_RES')
             ->select(
                 'o.COD_ORD', 'o.FEC_ORD', 'o.IND_ORD', 'o.EST_ORD', 'o.PRI_ORD',
                 's.NOM_SRV', 'p.NOM_PAC', 'p.APE_PAC', 'p.CI_PAC',
-                'r.COD_RES', 'r.DES_RES', 'r.EST_RES', 'r.CRI_RES'
+                'r.COD_RES', 'r.DES_RES', 'r.EST_RES', 'r.CRI_RES', 'r.ARC_RES',
+                'muestra.TIPO as TIPO_MUESTRA', 'muestra.FECHA as FECHA_MUESTRA',
+                'validacion.FECHA as FECHA_VALIDACION'
             )
             ->when($buscar !== '', function ($q) use ($buscar) {
                 $q->where(function ($w) use ($buscar) {
@@ -82,7 +86,7 @@ class LaboratorioService
             ->where('o.COD_ORD', $codOrd)
             ->select(
                 'o.COD_ORD', 'o.FEC_ORD', 'o.IND_ORD', 'o.EST_ORD', 'o.PRI_ORD', 'o.COD_CNS',
-                's.NOM_SRV', 'p.NOM_PAC', 'p.APE_PAC', 'p.CI_PAC'
+                's.NOM_SRV', 'p.COD_PAC', 'p.NOM_PAC', 'p.APE_PAC', 'p.CI_PAC'
             )
             ->first();
     }
@@ -93,9 +97,9 @@ class LaboratorioService
     }
 
     /** Pendiente -> Muestra tomada -> En proceso. Devuelve el estado nuevo. */
-    public function avanzar(string $codOrd, object $actor): string
+    public function avanzar(string $codOrd, object $actor, ?string $tipoMuestra = null): string
     {
-        return DB::transaction(function () use ($codOrd, $actor) {
+        return DB::transaction(function () use ($codOrd, $actor, $tipoMuestra) {
             $orden = $this->bloquearOrden($codOrd);
 
             $nuevo = self::SIGUIENTE[$orden->EST_ORD] ?? null;
@@ -103,11 +107,18 @@ class LaboratorioService
                 throw new DomainException("La orden {$codOrd} está «{$orden->EST_ORD}» y no se puede avanzar desde aquí.");
             }
 
+            if ($orden->EST_ORD === 'Pendiente') {
+                if (empty($actor->COD_EMP) || !trim((string) $tipoMuestra) || mb_strlen(trim($tipoMuestra)) > 80) {
+                    throw new DomainException('Indica el tipo de muestra o escribe «No requiere muestra» para estudios de imagen.');
+                }
+                DB::table('LAB_MUESTRA')->insert(['COD_ORD' => $codOrd, 'TIPO' => trim($tipoMuestra), 'FECHA' => now(), 'COD_EMP' => $actor->COD_EMP]);
+            }
+
             DB::table('ORDEN_EXAMEN')->where('COD_ORD', $codOrd)->update(['EST_ORD' => $nuevo]);
 
             Auditoria::registrar(
                 'Actualizar', 'Media', self::DOMINIO, 'ORDEN_EXAMEN', $codOrd,
-                "Estado: {$orden->EST_ORD} -> {$nuevo}",
+                "Estado: {$orden->EST_ORD} -> {$nuevo}" . ($tipoMuestra ? '; muestra: '.trim($tipoMuestra) : ''),
                 $actor,
                 codPac: $this->pacienteDeOrden($orden)
             );
@@ -138,13 +149,13 @@ class LaboratorioService
     }
 
     /** Carga el resultado (queda "Cargado", todavía no visible para el médico). */
-    public function guardarResultado(string $codOrd, string $descripcion, bool $critico, object $actor): string
+    public function guardarResultado(string $codOrd, string $descripcion, bool $critico, object $actor, ?string $archivo = null): array
     {
         if (empty($actor->COD_EMP)) {
             throw new DomainException('Tu usuario no está vinculado a un empleado, así que no puede cargar resultados.');
         }
 
-        return DB::transaction(function () use ($codOrd, $descripcion, $critico, $actor) {
+        return DB::transaction(function () use ($codOrd, $descripcion, $critico, $actor, $archivo) {
             $orden = $this->bloquearOrden($codOrd);
 
             if ($orden->EST_ORD !== 'En proceso') {
@@ -161,7 +172,7 @@ class LaboratorioService
                 'COD_RES' => $codRes,
                 'FEC_RES' => now(),
                 'DES_RES' => $descripcion,
-                'ARC_RES' => null,
+                'ARC_RES' => $archivo,
                 'COD_ORD' => $codOrd,
                 'EST_RES' => 'Cargado',
                 'CRI_RES' => $critico ? 1 : 0,
@@ -175,7 +186,8 @@ class LaboratorioService
                 codPac: $this->pacienteDeOrden($orden)
             );
 
-            return $codRes;
+            $notificado = $critico ? $this->notificarMedico($orden, true) : false;
+            return ['codigo' => $codRes, 'medico_notificado' => $notificado];
         });
     }
 
@@ -189,8 +201,12 @@ class LaboratorioService
             if ($res->EST_RES !== 'Cargado') {
                 throw new DomainException("El resultado de la orden {$codOrd} está «{$res->EST_RES}» y no se puede validar.");
             }
+            if (empty($actor->COD_EMP)) {
+                throw new DomainException('Tu usuario no está vinculado a un empleado responsable.');
+            }
 
             DB::table('RESULTADO_EXAMEN')->where('COD_RES', $res->COD_RES)->update(['EST_RES' => 'Validado']);
+            DB::table('LAB_VALIDACION')->insert(['COD_RES' => $res->COD_RES, 'FECHA' => now(), 'COD_EMP' => $actor->COD_EMP]);
 
             Auditoria::registrar(
                 'Actualizar', 'Alta', self::DOMINIO, 'RESULTADO_EXAMEN', $res->COD_RES,
@@ -203,10 +219,9 @@ class LaboratorioService
 
     /**
      * Validado -> Publicado y la orden pasa a "Listo".
-     * Si el resultado es crítico, se avisa al médico que pidió el examen.
-     * Devuelve true si se generó la notificación al médico.
+     * Avisa al médico solicitante y al paciente cuando tienen una cuenta activa.
      */
-    public function publicar(string $codOrd, object $actor): bool
+    public function publicar(string $codOrd, object $actor): array
     {
         return DB::transaction(function () use ($codOrd, $actor) {
             $orden = $this->bloquearOrden($codOrd);
@@ -220,7 +235,12 @@ class LaboratorioService
             DB::table('ORDEN_EXAMEN')->where('COD_ORD', $codOrd)->update(['EST_ORD' => 'Listo']);
 
             $critico = (int) $res->CRI_RES === 1;
-            $notificado = $critico && $this->notificarMedico($orden);
+            $notificado = $this->notificarMedico($orden, false);
+            $paciente = $this->pacienteDeOrden($orden);
+            $usuarioPaciente = $paciente ? DB::table('USUARIO')->where('COD_PAC', $paciente)->where('COD_ROL', 'ROL006')->where('EST_USR', 'Activo')->value('COD_USR') : null;
+            if ($usuarioPaciente) {
+                $this->notificar($usuarioPaciente, 'Resultado disponible', 'Tienes un resultado de examen disponible en tu portal.', $orden->COD_ORD);
+            }
 
             Auditoria::registrar(
                 'Actualizar', $critico ? 'Crítica' : 'Alta', self::DOMINIO, 'RESULTADO_EXAMEN', $res->COD_RES,
@@ -229,7 +249,7 @@ class LaboratorioService
                 codPac: $this->pacienteDeOrden($orden)
             );
 
-            return $notificado;
+            return ['medico' => $notificado, 'paciente' => (bool) $usuarioPaciente];
         });
     }
 
@@ -264,11 +284,11 @@ class LaboratorioService
         return $codPac ?: null;
     }
 
-    private function notificarMedico(object $orden): bool
+    private function notificarMedico(object $orden, bool $preliminar): bool
     {
         $codEmpMedico = DB::table('CONSULTA')->where('COD_CNS', $orden->COD_CNS)->value('COD_EMP');
         $codUsrMedico = $codEmpMedico
-            ? DB::table('USUARIO')->where('COD_EMP', $codEmpMedico)->value('COD_USR')
+            ? DB::table('USUARIO')->where('COD_EMP', $codEmpMedico)->where('COD_ROL', 'ROL003')->where('EST_USR', 'Activo')->value('COD_USR')
             : null;
 
         if (!$codUsrMedico) {
@@ -276,21 +296,26 @@ class LaboratorioService
         }
 
         $dato = $this->orden($orden->COD_ORD);
-        $mensaje = "Resultado crítico: {$dato->NOM_SRV} de {$dato->NOM_PAC} {$dato->APE_PAC} (orden {$orden->COD_ORD}).";
+        $mensaje = $preliminar
+            ? "Alerta preliminar de valor crítico: {$dato->NOM_SRV}, {$dato->NOM_PAC} {$dato->APE_PAC} (orden {$orden->COD_ORD}). Pendiente de validación."
+            : "Resultado disponible: {$dato->NOM_SRV}, {$dato->NOM_PAC} {$dato->APE_PAC} (orden {$orden->COD_ORD}).";
+        $this->notificar($codUsrMedico, $preliminar ? 'Resultado crítico' : 'Resultado disponible', $mensaje, $orden->COD_ORD);
+        return true;
+    }
 
+    private function notificar(string $usuario, string $tipo, string $mensaje, string $referencia): void
+    {
         $siguiente = (int) DB::table('NOTIFICACION')->max('id') + 1;
 
         DB::table('NOTIFICACION')->insert([
             'COD_NOT' => sprintf('NOT%07d', $siguiente),
             'FEC_NOT' => now(),
-            'TIP_NOT' => 'Resultado crítico',
+            'TIP_NOT' => $tipo,
             'MSG_NOT' => mb_substr($mensaje, 0, 255),
             'CAN_NOT' => 'Sistema',
-            'EST_NOT' => 'Pendiente',
-            'REF_NOT' => $orden->COD_ORD,
-            'COD_USR' => $codUsrMedico,
+            'EST_NOT' => 'Enviada',
+            'REF_NOT' => $referencia,
+            'COD_USR' => $usuario,
         ]);
-
-        return true;
     }
 }

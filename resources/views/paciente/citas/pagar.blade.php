@@ -156,15 +156,21 @@
             margin-top: 6px;
         }
     </style>
-</head>
+<link rel="stylesheet" href="{{ asset('css/paciente.css') }}"></head>
 <body>
 
-<header>Clínica CIES</header>
+<header><div class="paciente-logo"><x-brand-logo :width="155" /></div><strong>Portal del paciente</strong><a class="btn btn-sec" href="{{ route('paciente.dashboard') }}">Volver al inicio</a></header>@include('paciente._navegacion')
 
 <main>
     <section class="panel">
 
         <h1>Pagar el anticipo</h1>
+        <p>Saldo disponible: <strong>Bs {{ number_format($saldoDisponible, 2) }}</strong>.</p>
+        @if($saldoDisponible >= $cita->anticipo && $cita->anticipo > 0)
+            <form method="POST" action="{{ route('paciente.citas.aplicar-saldo', $cita->COD_CIT) }}" style="margin:16px 0">@csrf<button type="submit" class="btn principal">Usar saldo para el anticipo</button></form>
+        @elseif($saldoDisponible > 0)
+            <p>Para usar el saldo debe cubrir el anticipo completo; también puedes pagar normalmente y conservarlo.</p>
+        @endif
 
         @if (session('ok'))
             <div class="ok">{{ session('ok') }}</div>

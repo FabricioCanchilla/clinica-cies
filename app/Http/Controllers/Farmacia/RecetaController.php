@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Farmacia;
 
 use App\Http\Controllers\Controller;
 use App\Services\FarmaciaService;
+use App\Services\Auditoria;
+use Illuminate\Support\Facades\DB;
 use DomainException;
 use Illuminate\Http\Request;
 
@@ -40,6 +42,9 @@ class RecetaController extends Controller
             return redirect()->route('farmacia.dashboard')
                 ->withErrors(['receta' => "La receta {$codRec} no existe."]);
         }
+        $paciente = DB::table('RECETA as r')->join('CONSULTA as c', 'c.COD_CNS', '=', 'r.COD_CNS')
+            ->join('HISTORIA_CLINICA as h', 'h.COD_HIS', '=', 'c.COD_HIS')->where('r.COD_REC', $codRec)->value('h.COD_PAC');
+        Auditoria::registrar('Leer', 'Media', 'DOM03', 'RECETA', $codRec, 'Consulta de receta en farmacia', codPac: $paciente);
 
         return view('farmacia.despacho', [
             'receta' => $receta,
@@ -47,31 +52,19 @@ class RecetaController extends Controller
         ]);
     }
 
+    public function cantidad(Request $request, string $codRec, string $codDre)
+    {
+        $d = $request->validate(['cantidad' => 'required|integer|min:1|max:32000', 'confirmacion' => 'accepted']);
+        try {
+            $this->farmacia->confirmarCantidad($codRec, $codDre, (int) $d['cantidad'], auth()->user());
+        } catch (DomainException $e) {
+            return back()->withErrors(['cantidad' => $e->getMessage()]);
+        }
+        return back()->with('ok', 'Cantidad total confirmada para el despacho.');
+    }
+
     public function despachar(Request $request, string $codRec, string $codDre)
     {
-        $d = $request->validate([
-            'cantidad' => ['required', 'integer', 'min:1', 'max:32000'],
-        ], [
-            'cantidad.required' => 'Indica la cantidad a despachar.',
-            'cantidad.integer'  => 'La cantidad debe ser un número entero.',
-            'cantidad.min'      => 'La cantidad debe ser al menos 1.',
-        ]);
-
-        try {
-            $r = $this->farmacia->despacharItem($codRec, $codDre, (int) $d['cantidad'], auth()->user());
-        } catch (DomainException $e) {
-            return back()->withErrors(['receta' => $e->getMessage()]);
-        }
-
-        $mensaje = "Receta {$codRec}: se entregaron {$r['entregado']} de {$r['medicamento']} (" . implode(', ', $r['lotes']) . ').';
-
-        if ($r['entregado'] < $r['solicitado']) {
-            $mensaje .= " Solo había {$r['entregado']} unidades vigentes; el ítem queda con {$r['pendiente']} pendientes.";
-        }
-        if ($r['completa']) {
-            $mensaje .= ' La receta quedó «Completada».';
-        }
-
-        return back()->with('ok', $mensaje);
+        return back()->withErrors(['receta' => 'El cobro y la entrega deben registrarse juntos en caja.']);
     }
 }

@@ -58,9 +58,11 @@ class FarmaciaService
             ->join('PACIENTE as p', 'p.COD_PAC', '=', 'h.COD_PAC')
             ->join('EMPLEADO as e', 'e.COD_EMP', '=', 'c.COD_EMP')
             ->leftJoin('DETALLE_RECETA as d', 'd.COD_REC', '=', 'r.COD_REC')
+            ->leftJoin('FARMACIA_CANTIDAD as fc', 'fc.COD_DRE', '=', 'd.COD_DRE')
             ->select('r.COD_REC', 'r.FEC_REC', 'r.EST_REC',
                 'p.NOM_PAC', 'p.APE_PAC', 'p.CI_PAC', 'e.NOM_EMP', 'e.APE_EMP')
-            ->selectRaw('COALESCE(SUM(CEIL(24 / d.FRE_DRE) * d.DUR_DRE), 0) AS requeridas')
+            ->selectRaw('SUM(fc.CANTIDAD) AS requeridas')
+            ->selectRaw('SUM(CASE WHEN d.COD_DRE IS NOT NULL AND fc.COD_DRE IS NULL THEN 1 ELSE 0 END) AS sin_confirmar')
             ->selectRaw('COALESCE(SUM(d.CANENT_DRE), 0) AS entregadas')
             ->when($buscar !== '', function ($q) use ($buscar) {
                 $q->where(function ($w) use ($buscar) {
@@ -101,9 +103,10 @@ class FarmaciaService
         return DB::table('DETALLE_RECETA as d')
             ->join('MEDICAMENTO as m', 'm.COD_MED', '=', 'd.COD_MED')
             ->join('VIA_ADMIN as v', 'v.COD_VIA', '=', 'd.COD_VIA')
+            ->leftJoin('FARMACIA_CANTIDAD as fc', 'fc.COD_DRE', '=', 'd.COD_DRE')
             ->where('d.COD_REC', $codRec)
             ->select('d.COD_DRE', 'd.DOS_DRE', 'd.FRE_DRE', 'd.DUR_DRE', 'd.CANENT_DRE',
-                'd.COD_MED', 'm.DES_MED', 'v.DES_VIA')
+                'd.COD_MED', 'm.DES_MED', 'v.DES_VIA', 'fc.CANTIDAD')
             ->selectRaw(
                 '(SELECT COALESCE(SUM(l.CANDIS_LOT), 0) FROM LOTE_MEDICAMENTO l
                    WHERE l.COD_MED = d.COD_MED AND l.FECVEN_LOT >= ?) AS stock',
@@ -112,8 +115,8 @@ class FarmaciaService
             ->orderBy('d.COD_DRE')
             ->get()
             ->map(function ($f) {
-                $f->requeridas = self::requeridas((int) $f->FRE_DRE, (int) $f->DUR_DRE);
-                $f->pendientes = max(0, $f->requeridas - (int) $f->CANENT_DRE);
+                $f->requeridas = $f->CANTIDAD === null ? null : (int) $f->CANTIDAD;
+                $f->pendientes = $f->requeridas === null ? null : max(0, $f->requeridas - (int) $f->CANENT_DRE);
                 $f->stock      = (int) $f->stock;
                 return $f;
             });
@@ -148,7 +151,11 @@ class FarmaciaService
             }
 
             $nombre    = (string) DB::table('MEDICAMENTO')->where('COD_MED', $item->COD_MED)->value('DES_MED');
-            $requeridas = self::requeridas((int) $item->FRE_DRE, (int) $item->DUR_DRE);
+            $requeridas = DB::table('FARMACIA_CANTIDAD')->where('COD_DRE', $codDre)->value('CANTIDAD');
+            if ($requeridas === null) {
+                throw new DomainException('Confirma primero la cantidad total indicada en la receta.');
+            }
+            $requeridas = (int) $requeridas;
             $pendiente = $requeridas - (int) $item->CANENT_DRE;
 
             if ($pendiente <= 0) {
@@ -202,8 +209,9 @@ class FarmaciaService
             );
 
             // ¿Todos los ítems completos? entonces la receta pasa a Completada
-            $completa = DB::table('DETALLE_RECETA')->where('COD_REC', $codRec)->get()
-                ->every(fn ($d) => (int) $d->CANENT_DRE >= self::requeridas((int) $d->FRE_DRE, (int) $d->DUR_DRE));
+            $completa = DB::table('DETALLE_RECETA as d')->leftJoin('FARMACIA_CANTIDAD as f', 'f.COD_DRE', '=', 'd.COD_DRE')
+                ->where('d.COD_REC', $codRec)->get(['d.CANENT_DRE', 'f.CANTIDAD'])
+                ->every(fn ($d) => $d->CANTIDAD !== null && (int) $d->CANENT_DRE >= (int) $d->CANTIDAD);
 
             if ($completa) {
                 DB::table('RECETA')->where('COD_REC', $codRec)->update(['EST_REC' => 'Completada']);
@@ -223,6 +231,33 @@ class FarmaciaService
                 'completa'    => $completa,
                 'lotes'       => $usados,
             ];
+        });
+    }
+
+    public function confirmarCantidad(string $codRec, string $codDre, int $cantidad, object $actor): void
+    {
+        if (!$actor->COD_EMP || $cantidad < 1 || $cantidad > 32000) {
+            throw new DomainException('Indica una cantidad válida y utiliza una cuenta vinculada a un empleado.');
+        }
+        DB::transaction(function () use ($codRec, $codDre, $cantidad, $actor) {
+            $receta = DB::table('RECETA')->where('COD_REC', $codRec)->lockForUpdate()->first();
+            $item = DB::table('DETALLE_RECETA')->where('COD_REC', $codRec)->where('COD_DRE', $codDre)->lockForUpdate()->first();
+            if (!$receta || $receta->EST_REC !== 'Activa' || !$item || $cantidad < (int) $item->CANENT_DRE) {
+                throw new DomainException('La receta no está activa o la cantidad es menor a lo ya entregado.');
+            }
+            if (DB::table('FARMACIA_CANTIDAD')->where('COD_DRE', $codDre)->exists()) {
+                throw new DomainException('La cantidad de este medicamento ya fue confirmada.');
+            }
+            DB::table('FARMACIA_CANTIDAD')->insert(['COD_DRE' => $codDre, 'CANTIDAD' => $cantidad, 'COD_EMP' => $actor->COD_EMP, 'FECHA' => now()]);
+            Auditoria::registrar('Confirmar cantidad', 'Alta', self::DOM_CLINICO, 'DETALLE_RECETA', $codDre,
+                "Cantidad total confirmada contra la receta: {$cantidad} unidades", $actor, codPac: $this->pacienteDeReceta($codRec));
+            $items = DB::table('DETALLE_RECETA as d')->leftJoin('FARMACIA_CANTIDAD as f', 'f.COD_DRE', '=', 'd.COD_DRE')
+                ->where('d.COD_REC', $codRec)->get(['d.CANENT_DRE', 'f.CANTIDAD']);
+            if ($items->isNotEmpty() && $items->every(fn ($d) => $d->CANTIDAD !== null && (int) $d->CANENT_DRE >= (int) $d->CANTIDAD)) {
+                DB::table('RECETA')->where('COD_REC', $codRec)->update(['EST_REC' => 'Completada']);
+                Auditoria::registrar('Actualizar', 'Media', self::DOM_CLINICO, 'RECETA', $codRec,
+                    'Receta completada tras confirmar las cantidades ya entregadas', $actor, codPac: $this->pacienteDeReceta($codRec));
+            }
         });
     }
 

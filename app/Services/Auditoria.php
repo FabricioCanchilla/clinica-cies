@@ -46,6 +46,38 @@ class Auditoria
         if ($criticidad === 'Crítica') {
             self::notificarCritico($accion, $registro, $detalle);
         }
+        if ($accion === 'Leer' && $entidad === 'HISTORIA_CLINICA' && $actor->COD_ROL === 'ROL003' && $actor->COD_EMP) {
+            self::revisarHorarioMedico($actor);
+            $cantidad = DB::table('AUDITORIA')->where('COD_USR', $actor->COD_USR)->where('ENT_AUD', 'HISTORIA_CLINICA')
+                ->where('ACC_AUD', 'Leer')->where('FEC_AUD', '>=', now()->subMinutes(15))->whereNotNull('COD_PAC')->distinct()->count('COD_PAC');
+            if ($cantidad >= 10) {
+                self::alertaSeguridad($actor, 'Consulta masiva', 'Se consultaron al menos 10 pacientes distintos en 15 minutos.', 15);
+            }
+        }
+    }
+
+    private static function revisarHorarioMedico(object $actor): void
+    {
+        if (!DB::table('HORARIO_MEDICO')->where('COD_EMP', $actor->COD_EMP)->exists()) { return; }
+        $dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        $enHorario = DB::table('HORARIO_MEDICO')->where('COD_EMP', $actor->COD_EMP)->where('DIA_HOR', $dias[now()->dayOfWeek])
+            ->where('HORINI_HOR', '<=', now()->format('H:i:s'))->where('HORFIN_HOR', '>', now()->format('H:i:s'))->exists();
+        if ($enHorario) { return; }
+        self::alertaSeguridad($actor, 'Acceso fuera horario', 'Acceso a historia fuera del horario médico registrado.', 60);
+    }
+
+    private static function alertaSeguridad(object $actor, string $tipo, string $mensaje, int $minutos): void
+    {
+        $yaAvisado = DB::table('NOTIFICACION')->where('TIP_NOT', $tipo)->where('REF_NOT', $actor->COD_USR)
+            ->where('FEC_NOT', '>=', now()->subMinutes($minutos))->exists();
+        if (!$yaAvisado) {
+            $destinatarios = DB::table('USUARIO')->whereIn('COD_ROL', ['ROL001', 'ROL009'])->where('EST_USR', 'Activo')->pluck('COD_USR');
+            foreach ($destinatarios as $destinatario) {
+                DB::table('NOTIFICACION')->insert(['COD_NOT' => sprintf('NOT%07d', (int) DB::table('NOTIFICACION')->max('id') + 1), 'FEC_NOT' => now(),
+                    'TIP_NOT' => $tipo, 'MSG_NOT' => $mensaje.' Usuario: '.$actor->USR_USR.'.',
+                    'CAN_NOT' => 'Sistema', 'EST_NOT' => 'Enviada', 'REF_NOT' => $actor->COD_USR, 'COD_USR' => $destinatario]);
+            }
+        }
     }
 
     private static function notificarCritico(string $accion, string $registro, string $detalle): void

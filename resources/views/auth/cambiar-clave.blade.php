@@ -46,6 +46,7 @@
 </head>
 <body>
     <div class="card">
+        <x-brand-logo :width="170" />
         <h1>Cambiar contraseña</h1>
         <p class="sub">{{ auth()->user()->USR_USR }}</p>
 

@@ -79,7 +79,7 @@
                                 <span class="badge">Normal</span>
                             @endif
                         </td>
-                        <td><span class="badge {{ $claseEstado[$o->EST_ORD] ?? '' }}">{{ $o->EST_ORD }}</span></td>
+                        <td><span class="badge {{ $claseEstado[$o->EST_ORD] ?? '' }}">{{ $o->EST_ORD }}</span>@if($o->TIPO_MUESTRA)<div style="font-size:12px">{{ $o->TIPO_MUESTRA }} · {{ $o->FECHA_MUESTRA }}</div>@endif</td>
                         <td>
                             @if ($o->COD_RES)
                                 <span class="badge {{ $claseResultado[$o->EST_RES] ?? '' }}">{{ $o->EST_RES }}</span>
@@ -87,6 +87,8 @@
                                     <span class="badge critica">Crítico</span>
                                 @endif
                                 <div style="color: var(--suave); font-size: 12px; margin-top: 4px;">{{ \Illuminate\Support\Str::limit($o->DES_RES, 90) }}</div>
+                                @if ($o->ARC_RES)<a href="{{ route('resultados.archivo', $o->COD_RES) }}">Descargar archivo</a>@endif
+                                @if ($o->FECHA_VALIDACION)<div style="font-size:12px">Validado: {{ $o->FECHA_VALIDACION }}</div>@endif
                             @else
                                 —
                             @endif
@@ -95,6 +97,7 @@
                             @if ($o->EST_ORD === 'Pendiente')
                                 <form method="POST" action="{{ route('laboratorio.avanzar', $o->COD_ORD) }}" style="display: inline;">
                                     @csrf
+                                    <label style="display:block;font-size:12px">Tipo de muestra o estudio <input name="muestra" required maxlength="80" placeholder="Ej. sangre o sin muestra" style="padding:6px;border:1px solid #cbd5e1;border-radius:6px"></label>
                                     <button type="submit" class="btn principal">Tomar muestra</button>
                                 </form>
                                 <form method="POST" action="{{ route('laboratorio.cancelar', $o->COD_ORD) }}" style="display: inline;"

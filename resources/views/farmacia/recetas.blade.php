@@ -67,7 +67,7 @@
                         </td>
                         <td>{{ $r->NOM_EMP }} {{ $r->APE_EMP }}</td>
                         <td><span class="badge {{ $claseEstado[$r->EST_REC] ?? '' }}">{{ $r->EST_REC }}</span></td>
-                        <td>{{ (int) $r->entregadas }} / {{ (int) $r->requeridas }} uds</td>
+                        <td>{{ (int) $r->entregadas }} entregadas @if($r->sin_confirmar) · cantidades por confirmar @else / {{ (int) $r->requeridas }} uds @endif</td>
                         <td>
                             <a href="{{ route('farmacia.receta', $r->COD_REC) }}"
                                class="btn {{ $r->EST_REC === 'Activa' ? 'principal' : '' }}">

@@ -112,13 +112,19 @@ class ComprobanteService
                 return $ya->NRO_COM;
             }
 
+            $detalle = DB::table('CAJA_DETALLE_PAGO')->where('COD_PAG', $pago->COD_PAG)->first();
             $otros = (float) DB::table('PAGO')
                 ->where('COD_CIT', $pago->COD_CIT)->where('EST_PAG', 'Confirmado')
                 ->where('COD_PAG', '!=', $pago->COD_PAG)
                 ->sum('MON_PAG');
+            $otros += (float) DB::table('SALDO_APLICACION')->where('COD_CIT', $pago->COD_CIT)->sum('MONTO');
             $base  = round((float) $pago->PRE_SRV - $otros, 2);
             $desc  = $base > 0 ? (int) round(100 * (1 - (float) $pago->MON_PAG / $base)) : 0;
             $desc  = max(0, min(100, $desc));
+            if ($detalle) {
+                $base = (float) $detalle->BASE;
+                $desc = (int) $detalle->PORCENTAJE;
+            }
             if ($base <= 0) {
                 $base = (float) $pago->MON_PAG;
             }

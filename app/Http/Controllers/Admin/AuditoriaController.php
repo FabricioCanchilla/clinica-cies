@@ -23,6 +23,8 @@ class AuditoriaController extends Controller
     {
         [$query, $f, $dominios, $roles, $acciones] = $this->consulta($request);
 
+        Auditoria::registrar('Leer auditoría', 'Media', 'DOM02', 'AUDITORIA', 'LISTADO', 'Consulta del registro de auditoría');
+
         $registros = $query->simplePaginate(20)->withQueryString();
 
         return view('admin.auditoria.index', [

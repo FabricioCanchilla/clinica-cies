@@ -30,8 +30,17 @@ class LoteController extends Controller
             'estados'      => FarmaciaService::ESTADOS_LOTE,
             'diasAlerta'   => FarmaciaService::DIAS_ALERTA,
             'buscar'       => $buscar,
+            'precios'      => app(\App\Services\CobroMedicamentoService::class)->precios(),
             'estado'       => $estado,
         ]);
+    }
+
+    public function precio(Request $request, string $medicamento, \App\Services\CobroMedicamentoService $servicio)
+    {
+        $d = $request->validate(['precio' => ['required', 'numeric', 'gt:0', 'max:100000', 'decimal:0,2']]);
+        try { $servicio->fijarPrecio($medicamento, $d['precio'], auth()->user()->COD_EMP ?? ''); }
+        catch (DomainException $e) { return back()->withErrors(['precio' => $e->getMessage()]); }
+        return back()->with('ok', 'Precio de medicamento registrado.');
     }
 
     public function entrada(Request $request)

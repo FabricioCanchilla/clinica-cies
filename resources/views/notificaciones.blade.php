@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends(auth()->user()->COD_ROL === 'ROL003' ? 'medico.layout' : 'layouts.admin')
 
 @section('titulo', 'Notificaciones')
 

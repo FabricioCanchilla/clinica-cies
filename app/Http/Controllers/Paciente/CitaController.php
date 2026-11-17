@@ -9,11 +9,64 @@ use App\Services\InsumoService;
 use Carbon\Carbon;
 use DomainException;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
+use App\Services\Auditoria;
+use App\Services\SaldoPacienteService;
 
 class CitaController extends Controller
 {
     public function __construct(private CitaService $citas)
     {
+    }
+
+    public function cancelarReserva(string $codCit): RedirectResponse
+    {
+        $paciente = $this->codPac();
+        DB::transaction(function () use ($codCit, $paciente) {
+            $cita = DB::table('CITA')->where('COD_CIT', $codCit)->where('COD_PAC', $paciente)->lockForUpdate()->first();
+            abort_unless($cita, 404);
+            abort_unless($cita->EST_CIT === 'Pendiente de pago', 422, 'Solo puedes cancelar una reserva pendiente de pago.');
+            abort_if(DB::table('PAGO')->where('COD_CIT', $codCit)->where('EST_PAG', 'Confirmado')->exists(), 422, 'Esta cita tiene un pago. Solicita ayuda en recepción.');
+            DB::table('CITA')->where('COD_CIT', $codCit)->update(['EST_CIT' => 'Cancelada', 'FECEXP_CIT' => null]);
+            Auditoria::registrar('Cancelar reserva', 'Media', 'DOM04', 'CITA', $codCit, 'Reserva sin pago cancelada por el paciente', codPac: $paciente);
+        });
+        return redirect()->route('paciente.dashboard')->with('ok', 'Tu reserva sin pago fue cancelada.');
+    }
+
+    public function cancelarConfirmada(string $codCit, SaldoPacienteService $saldos): RedirectResponse
+    {
+        $monto = $saldos->cancelar($codCit, $this->codPac(), 'Solicitud del paciente');
+        return redirect()->route('paciente.dashboard')->with('ok', 'Cita cancelada. Anticipo conservado como saldo: Bs '.number_format($monto, 2));
+    }
+
+    public function aplicarSaldo(string $codCit, SaldoPacienteService $saldos): RedirectResponse
+    {
+        $monto = $saldos->aplicar($codCit, $this->codPac());
+        return redirect()->route('paciente.dashboard')->with('ok', 'Cita confirmada con Bs '.number_format($monto, 2).' de tu saldo.');
+    }
+
+    public function reprogramar(Request $request, string $codCit): RedirectResponse
+    {
+        $datos = $request->validate(['fecha' => ['required', 'date_format:Y-m-d'], 'hora' => ['required', 'date_format:H:i']]);
+        $paciente = $this->codPac();
+        DB::transaction(function () use ($codCit, $datos, $paciente) {
+            $cita = DB::table('CITA')->where('COD_CIT', $codCit)->where('COD_PAC', $paciente)->first();
+            abort_unless($cita, 404);
+            DB::table('EMPLEADO')->where('COD_EMP', $cita->COD_EMP)->lockForUpdate()->first();
+            $cita = DB::table('CITA')->where('COD_CIT', $codCit)->where('COD_PAC', $paciente)->lockForUpdate()->first();
+            abort_unless($cita && $cita->EST_CIT === 'Confirmada', 422, 'Solo puedes reprogramar una cita confirmada.');
+            abort_if(Carbon::parse($cita->FEC_CIT.' '.$cita->HOR_CIT)->lt(now()->addDay()), 422, 'Debes solicitar el cambio con al menos 24 horas de anticipación.');
+            $nuevaFecha = Carbon::parse($datos['fecha'].' '.$datos['hora']);
+            abort_if($nuevaFecha->lt(now()->addDay()) || $nuevaFecha->gt(today()->addDays((int) config('cies.dias_max_anticipacion'))->endOfDay()), 422, 'El nuevo horario debe estar al menos a 24 horas y dentro del período permitido.');
+            abort_if(DB::table('MEDICO_ATENCION')->where('COD_CIT', $codCit)->where('ESTADO', 'En consulta')->exists(), 422, 'La consulta ya comenzó.');
+            $slot = collect($this->citas->horariosLibres($cita->COD_EMP, $nuevaFecha))->firstWhere('hora', $datos['hora']);
+            abort_unless($slot, 422, 'El horario seleccionado no está disponible para tu médico.');
+            DB::table('CITA')->where('COD_CIT', $codCit)->update(['FEC_CIT' => $datos['fecha'], 'HOR_CIT' => $datos['hora'].':00', 'COD_CON' => $slot['cod_con']]);
+            DB::table('MEDICO_ATENCION')->where('COD_CIT', $codCit)->delete();
+            Auditoria::registrar('Reprogramar cita', 'Media', 'DOM04', 'CITA', $codCit, "Paciente cambió {$cita->FEC_CIT} {$cita->HOR_CIT} a {$datos['fecha']} {$datos['hora']}; conserva sus pagos", codPac: $paciente);
+        });
+        return redirect()->route('paciente.dashboard')->with('ok', 'Tu cita fue reprogramada. Tus pagos permanecen asociados.');
     }
 
     /** RF007: formulario de agendamiento (catálogos reales desde CitaService). */
@@ -99,6 +152,7 @@ class CitaController extends Controller
             'cita'    => $cita,
             'metodos' => $this->citas->metodosPago(),
             'otp'     => session('otp_cita.' . $codCit),
+            'saldoDisponible' => app(SaldoPacienteService::class)->disponible($this->codPac()),
         ]);
     }
 

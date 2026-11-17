@@ -34,19 +34,41 @@ class CajaService
 
         $total    = (float) (clone $base)->sum('MON_PAG');
         $efectivo = (float) (clone $base)->where('COD_MET', config('cies.metodo_efectivo'))->sum('MON_PAG');
+        $examenes = DB::table('CAJA_EXAMEN')->where('COD_CAJ', $caja->COD_CAJ)->where('ESTADO', 'Confirmado');
+        $total += (float) (clone $examenes)->sum('MONTO');
+        $efectivo += (float) (clone $examenes)->where('COD_MET', config('cies.metodo_efectivo'))->sum('MONTO');
+        $medicamentos = DB::table('CAJA_MEDICAMENTO')->where('COD_CAJ', $caja->COD_CAJ)->where('ESTADO', 'Confirmado');
+        $total += (float) (clone $medicamentos)->sum('MONTO');
+        $efectivo += (float) (clone $medicamentos)->where('COD_MET', config('cies.metodo_efectivo'))->sum('MONTO');
         $porMetodo = DB::table('PAGO as p')
             ->join('METODO_PAGO as m', 'm.COD_MET', '=', 'p.COD_MET')
             ->where('p.COD_CAJ', $caja->COD_CAJ)->where('p.EST_PAG', 'Confirmado')
             ->groupBy('m.DES_MET')
             ->orderBy('m.DES_MET')
             ->get(['m.DES_MET', DB::raw('COUNT(*) as cantidad'), DB::raw('SUM(p.MON_PAG) as total')]);
+        $metodosExamen = DB::table('CAJA_EXAMEN as x')->join('METODO_PAGO as m', 'm.COD_MET', '=', 'x.COD_MET')
+            ->where('x.COD_CAJ', $caja->COD_CAJ)->where('x.ESTADO', 'Confirmado')->groupBy('m.DES_MET')
+            ->get(['m.DES_MET', DB::raw('COUNT(*) as cantidad'), DB::raw('SUM(x.MONTO) as total')]);
+        foreach ($metodosExamen as $metodo) {
+            $existente = $porMetodo->firstWhere('DES_MET', $metodo->DES_MET);
+            if ($existente) { $existente->cantidad += $metodo->cantidad; $existente->total += $metodo->total; }
+            else { $porMetodo->push($metodo); }
+        }
+        $metodosMedicamento = DB::table('CAJA_MEDICAMENTO as x')->join('METODO_PAGO as m', 'm.COD_MET', '=', 'x.COD_MET')
+            ->where('x.COD_CAJ', $caja->COD_CAJ)->where('x.ESTADO', 'Confirmado')->groupBy('m.DES_MET')
+            ->get(['m.DES_MET', DB::raw('COUNT(*) as cantidad'), DB::raw('SUM(x.MONTO) as total')]);
+        foreach ($metodosMedicamento as $metodo) {
+            $existente = $porMetodo->firstWhere('DES_MET', $metodo->DES_MET);
+            if ($existente) { $existente->cantidad += $metodo->cantidad; $existente->total += $metodo->total; }
+            else { $porMetodo->push($metodo); }
+        }
 
         return [
             'total'     => $total,
             'efectivo'  => $efectivo,
             'esperado'  => round((float) $caja->MONAPE_CAJ + $efectivo, 2),
             'porMetodo' => $porMetodo,
-            'anulados'  => DB::table('PAGO')->where('COD_CAJ', $caja->COD_CAJ)->where('EST_PAG', 'Anulado')->count(),
+            'anulados'  => DB::table('PAGO')->where('COD_CAJ', $caja->COD_CAJ)->where('EST_PAG', 'Anulado')->count() + DB::table('CAJA_EXAMEN')->where('COD_CAJ', $caja->COD_CAJ)->where('ESTADO', 'Anulado')->count() + DB::table('CAJA_MEDICAMENTO')->where('COD_CAJ', $caja->COD_CAJ)->where('ESTADO', 'Anulado')->count(),
         ];
     }
 
@@ -55,16 +77,22 @@ class CajaService
     {
         $pagado = DB::table('PAGO')->selectRaw('COALESCE(SUM(MON_PAG), 0)')
             ->whereColumn('COD_CIT', 'c.COD_CIT')->where('EST_PAG', 'Confirmado');
+        $saldoAplicado = DB::table('SALDO_APLICACION')->selectRaw('COALESCE(SUM(MONTO), 0)')->whereColumn('COD_CIT', 'c.COD_CIT');
 
         $q = DB::table('CITA as c')
             ->join('PACIENTE as p', 'p.COD_PAC', '=', 'c.COD_PAC')
             ->join('SERVICIO as s', 's.COD_SRV', '=', 'c.COD_SRV')
             ->join('EMPLEADO as e', 'e.COD_EMP', '=', 'c.COD_EMP')
             ->whereIn('c.EST_CIT', ['Confirmada', 'Atendida'])
+            ->whereNotExists(function ($sub) {
+                $sub->from('PAGO as liquidado')->whereColumn('liquidado.COD_CIT', 'c.COD_CIT')
+                    ->where('liquidado.EST_PAG', 'Confirmado')->where('liquidado.TIP_PAG', 'Total');
+            })
             ->select(['c.COD_CIT', 'c.FEC_CIT', 'c.HOR_CIT', 'c.EST_CIT', 'p.NOM_PAC', 'p.APE_PAC', 'p.CI_PAC',
                       's.NOM_SRV', 's.PRE_SRV', 'e.TIT_EMP', 'e.APE_EMP'])
             ->selectSub($pagado, 'PAGADO')
-            ->whereRaw('s.PRE_SRV > (' . $pagado->toSql() . ')', $pagado->getBindings());
+            ->selectSub($saldoAplicado, 'SALDO_APLICADO')
+            ->whereRaw('s.PRE_SRV > (' . $pagado->toSql() . ') + (' . $saldoAplicado->toSql() . ')', array_merge($pagado->getBindings(), $saldoAplicado->getBindings()));
 
         $buscar = trim($buscar);
         if ($buscar !== '') {
@@ -77,7 +105,7 @@ class CajaService
         }
 
         return $q->orderBy('c.FEC_CIT')->orderBy('c.HOR_CIT')->limit(50)->get()
-            ->each(fn ($c) => $c->SALDO = round((float) $c->PRE_SRV - (float) $c->PAGADO, 2));
+            ->each(function ($c) { $c->PAGADO = (float) $c->PAGADO + (float) $c->SALDO_APLICADO; $c->SALDO = round((float) $c->PRE_SRV - $c->PAGADO, 2); });
     }
 
     public function citaParaCobro(string $codCit): object
@@ -119,6 +147,26 @@ class CajaService
     public function metodosPago()
     {
         return DB::table('METODO_PAGO')->orderBy('DES_MET')->get();
+    }
+
+    public function historial(string $codEmp)
+    {
+        return DB::table('CAJA')->where('COD_EMP', $codEmp)->where('EST_CAJ', 'Cerrada')
+            ->orderByDesc('FECCIE_CAJ')->limit(30)->get()->map(function ($caja) {
+                $caja->resumen = $this->resumen($caja);
+                $caja->diferencia = round((float) $caja->MONCIE_CAJ - $caja->resumen['esperado'], 2);
+                return $caja;
+            });
+    }
+
+    public function movimientos(string $codCaj)
+    {
+        return DB::table('PAGO as p')->join('CITA as c', 'c.COD_CIT', '=', 'p.COD_CIT')
+            ->join('PACIENTE as a', 'a.COD_PAC', '=', 'c.COD_PAC')
+            ->join('METODO_PAGO as m', 'm.COD_MET', '=', 'p.COD_MET')
+            ->leftJoin('CAJA_DETALLE_PAGO as d', 'd.COD_PAG', '=', 'p.COD_PAG')
+            ->where('p.COD_CAJ', $codCaj)->orderByDesc('p.id')
+            ->get(['p.COD_PAG', 'p.FEC_PAG', 'p.MON_PAG', 'p.EST_PAG', 'p.COD_CIT', 'a.NOM_PAC', 'a.APE_PAC', 'm.DES_MET', 'd.PORCENTAJE', 'd.DESCUENTO']);
     }
 
     // ---------- Apertura ----------
@@ -182,6 +230,9 @@ class CajaService
             if (!$caja) {
                 throw new DomainException('Abre tu caja antes de cobrar (RN26).');
             }
+            if (!Carbon::parse($caja->FECAPE_CAJ)->isToday()) {
+                throw new DomainException('La caja es de un día anterior. Ciérrala y abre una nueva para registrar cobros.');
+            }
 
             $cita = DB::table('CITA as c')->join('SERVICIO as s', 's.COD_SRV', '=', 'c.COD_SRV')
                 ->where('c.COD_CIT', $codCit)->lockForUpdate()
@@ -191,6 +242,10 @@ class CajaService
             }
 
             $pagado = (float) DB::table('PAGO')->where('COD_CIT', $codCit)->where('EST_PAG', 'Confirmado')->sum('MON_PAG');
+            $pagado += (float) DB::table('SALDO_APLICACION')->where('COD_CIT', $codCit)->sum('MONTO');
+            if (DB::table('PAGO')->where('COD_CIT', $codCit)->where('EST_PAG', 'Confirmado')->where('TIP_PAG', 'Total')->exists()) {
+                throw new DomainException('La cita ya fue liquidada.');
+            }
             $saldo  = round((float) $cita->PRE_SRV - $pagado, 2);
             if ($saldo <= 0) {
                 throw new DomainException('La cita ya no tiene saldo pendiente.');
@@ -211,6 +266,10 @@ class CajaService
                 'COD_MET' => $codMet,
                 'COD_OTP' => null,
                 'COD_CAJ' => $caja->COD_CAJ,
+            ]);
+            DB::table('CAJA_DETALLE_PAGO')->insert([
+                'COD_PAG' => $codPag, 'BASE' => $saldo, 'PORCENTAJE' => $descuento,
+                'DESCUENTO' => round($saldo - $monto, 2), 'COD_AUTORIZADOR' => $admin->COD_USR ?? null,
             ]);
 
             $detalle = "Saldo Bs {$saldo} de la cita {$codCit} ({$cita->NOM_SRV}), cobrado Bs {$monto} en caja {$caja->COD_CAJ}";
@@ -296,6 +355,9 @@ class CajaService
             if (!$comp || $comp->COD_CAJ !== $caja->COD_CAJ) {
                 throw new DomainException('Solo puedes anular comprobantes emitidos por tu caja abierta.');
             }
+            if (!Carbon::parse($comp->FEC_COM)->isToday()) {
+                throw new DomainException('Solo se puede anular un comprobante el mismo día en que se emitió.');
+            }
             if ($comp->EST_COM !== 'Emitido') {
                 throw new DomainException('El comprobante ya está anulado.');
             }
@@ -312,7 +374,10 @@ class CajaService
 
             // El cobro de esa cita en esta caja también se anula: el saldo vuelve a quedar pendiente
             $pagos = DB::table('PAGO')->where('COD_CIT', $comp->COD_CIT)->where('COD_CAJ', $caja->COD_CAJ)
-                ->where('EST_PAG', 'Confirmado')->pluck('COD_PAG');
+                ->where('EST_PAG', 'Confirmado')->where('MON_PAG', $comp->MONTO_COM)->pluck('COD_PAG');
+            if ($pagos->count() !== 1) {
+                throw new DomainException('No se pudo identificar un único pago de este comprobante. Solicita revisión administrativa.');
+            }
             DB::table('PAGO')->whereIn('COD_PAG', $pagos)->update(['EST_PAG' => 'Anulado']);
 
             Auditoria::registrar('Anular comprobante', 'Alta', 'DOM04', 'COMPROBANTE', $nroCom,

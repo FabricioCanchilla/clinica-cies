@@ -1,0 +1,13 @@
+@extends('layouts.admin')
+@section('titulo','Citas')
+@section('contenido')
+<h1>Gestión de citas</h1><p class="sub">Consulta las citas, registra la llegada y cancela con motivo.</p>
+@if(session('ok'))<div class="card">{{ session('ok') }}</div>@endif
+@if($errors->any())<div class="card">{{ $errors->first() }}</div>@endif
+<form class="barra" method="get"><input type="date" name="fecha" value="{{ request('fecha') }}" aria-label="Fecha"><input name="buscar" maxlength="100" value="{{ request('buscar') }}" placeholder="Paciente o CI"><select name="estado"><option value="">Todos los estados</option>@foreach(['Pendiente de pago','Confirmada','Atendida','Cancelada','Expirada','No asistio'] as $estado)<option @selected(request('estado')===$estado)>{{ $estado }}</option>@endforeach</select><button class="btn principal">Filtrar</button><a class="btn" href="{{ route('admin.citas') }}">Limpiar</a></form>
+<div class="card" style="overflow-x:auto"><table><thead><tr><th>Fecha y hora</th><th>Paciente</th><th>Médico / servicio</th><th>Motivo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+@forelse($citas as $c)<tr><td>{{ $c->FEC_CIT }} {{ substr($c->HOR_CIT,0,5) }}<br>{{ $c->COD_CIT }}</td><td>{{ $c->NOM_PAC }} {{ $c->APE_PAC }}<br>CI {{ $c->CI_PAC }} · {{ $c->TEL_PAC }}</td><td>{{ $c->NOM_EMP }} {{ $c->APE_EMP }}<br>{{ $c->NOM_SRV }}</td><td>{{ $c->MOT_CIT }}</td><td>{{ $c->EST_CIT === 'Confirmada' ? ($c->ATENCION ?? $c->EST_CIT) : $c->EST_CIT }}</td><td>
+@if($c->EST_CIT === 'Confirmada' && $c->FEC_CIT === today()->toDateString() && !$c->ATENCION)<form method="post" action="{{ route('admin.citas.llegada',$c->COD_CIT) }}">@csrf<button class="btn">Registrar llegada</button></form>@endif
+@if($c->EST_CIT === 'Confirmada' && $c->ATENCION !== 'En consulta')<details><summary>Reprogramar</summary><form method="post" action="{{ route('admin.citas.reprogramar',$c->COD_CIT) }}">@csrf<label>Nueva fecha<input type="date" name="fecha" min="{{ today()->toDateString() }}" required></label><label>Nueva hora<input type="time" name="hora" required></label><label>Motivo<input name="motivo" minlength="10" maxlength="200" required></label><p>Se verificará la disponibilidad del médico.</p><button class="btn">Reprogramar</button></form></details>@endif
+@if(in_array($c->EST_CIT,['Confirmada','Pendiente de pago']) && $c->ATENCION !== 'En consulta')<details><summary>Cancelar cita</summary><form method="post" action="{{ route('admin.citas.cancelar',$c->COD_CIT) }}">@csrf<label>Motivo<input name="motivo" required minlength="10" maxlength="200"></label><button class="btn">Confirmar cancelación</button></form></details>@endif</td></tr>@empty<tr><td colspan="6">No se encontraron citas.</td></tr>@endforelse</tbody></table>{{ $citas->links() }}</div>
+@endsection

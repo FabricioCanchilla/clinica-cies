@@ -7,6 +7,7 @@
 @endphp
 
 @section('contenido')
+    <details class="card" style="margin-bottom:20px"><summary>Precios de medicamentos</summary><p>Registra el precio unitario vigente en bolivianos.</p><table><tr><th>Medicamento</th><th>Precio actual</th><th>Nuevo precio unitario</th></tr>@foreach($precios as $p)<tr><td>{{ $p->DES_MED }}</td><td>{{ $p->PRECIO !== null ? 'Bs '.number_format($p->PRECIO,2) : 'Sin precio' }}</td><td><form method="post" action="{{ route('farmacia.precios.guardar',$p->COD_MED) }}">@csrf<input type="number" name="precio" step="0.01" min="0.01" max="100000" required><button class="btn">Guardar</button></form></td></tr>@endforeach</table></details>
     <h1>Lotes y stock</h1>
     <p class="sub">Existencias, entradas, bajas y alertas de vencimiento (PEPS: sale primero el lote que vence antes).</p>
 

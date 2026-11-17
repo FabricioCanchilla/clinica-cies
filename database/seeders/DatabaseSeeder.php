@@ -10,8 +10,10 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             DatosInicialesSeeder::class,   // roles, admin, dominios, especialidades, métodos de pago, servicios, consultorio
+            TarifasEspecialidadPruebaSeeder::class,
             UsuariosPruebaSeeder::class,   // empleados de prueba (médico con especialidad y horario) y paciente
             DatosClinicosPruebaSeeder::class,
+            Cie10Seeder::class,
         ]);
     }
 }

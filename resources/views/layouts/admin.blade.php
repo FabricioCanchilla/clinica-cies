@@ -251,7 +251,7 @@
 </head>
 <body>
     <aside>
-        <div class="marca">Clínica <span>CIES</span></div>
+        <div class="marca"><x-brand-logo :width="130" /></div>
         <nav>
             @if (auth()->user()->COD_ROL === 'ROL001')
                 <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'activo' : '' }}">
@@ -282,6 +282,14 @@
                 <a href="{{ route('admin.auditoria') }}" class="{{ request()->routeIs('admin.auditoria*') ? 'activo' : '' }}">
                     <i class="fas fa-clipboard-list"></i> Auditoría
                 </a>
+            @elseif (auth()->user()->COD_ROL === 'ROL002')
+                <a href="{{ route('recepcion.dashboard') }}" class="{{ request()->routeIs('recepcion.dashboard') ? 'activo' : '' }}"><i class="fas fa-house"></i> Recepción</a>
+                <div class="nav-titulo">Gestión</div>
+                <a href="{{ route('recepcion.dashboard') }}#citas"><i class="fas fa-calendar-check"></i> Citas y llegadas</a>
+                <a href="{{ route('recepcion.dashboard') }}#pacientes"><i class="fas fa-user-injured"></i> Pacientes</a>
+                <a href="{{ route('recepcion.dashboard') }}#disponibilidad"><i class="fas fa-clock"></i> Disponibilidad</a>
+                <a href="{{ route('recepcion.dashboard') }}#seguros"><i class="fas fa-shield"></i> Seguros</a>
+                <a href="{{ route('notificaciones') }}"><i class="fas fa-bell"></i> Notificaciones</a>
             @elseif (auth()->user()->COD_ROL === 'ROL009')
                 <div class="nav-titulo">Control</div>
                 <a href="{{ route('admin.auditoria') }}" class="{{ request()->routeIs('admin.auditoria*') ? 'activo' : '' }}">
@@ -299,6 +307,9 @@
                     <i class="fas fa-boxes-stacked"></i> Lotes y stock
                 </a>
             @elseif (auth()->user()->COD_ROL === 'ROL004')
+                <a href="{{ route('enfermeria.pacientes') }}" class="{{ request()->routeIs('enfermeria.paciente*') ? 'activo' : '' }}">
+                    <i class="fas fa-bed-pulse"></i> Pacientes y turno
+                </a>
                 <a href="{{ route('enfermeria.dashboard') }}" class="{{ request()->routeIs('enfermeria.dashboard') ? 'activo' : '' }}">
                     <i class="fas fa-hand-holding-medical"></i> Insumos de familiares
                 </a>

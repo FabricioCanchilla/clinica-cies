@@ -23,7 +23,7 @@
 </head>
 <body>
     <header>
-        <strong>Clínica CIES</strong>
+        <x-brand-logo :width="150" />
         <div class="user">
             <span>{{ auth()->user()->USR_USR }} · {{ config('roles.' . auth()->user()->COD_ROL . '.nombre') }}</span>
             <form method="POST" action="{{ route('logout') }}">

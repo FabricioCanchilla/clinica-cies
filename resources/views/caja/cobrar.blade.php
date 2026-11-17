@@ -28,6 +28,7 @@
 
             <label for="descuento">Descuento (%)</label>
             <input id="descuento" type="number" name="descuento" min="0" max="99" step="1" value="{{ old('descuento', 0) }}" required>
+            <p class="sub">El porcentaje se aplica al saldo pendiente, después del anticipo.</p>
 
             <div id="autorizacion" style="display: none; margin-top: 8px; padding: 12px; border: 1px dashed #f59e0b; border-radius: 8px;">
                 <p style="font-size: 13px; color: #92400e; margin-bottom: 8px;">

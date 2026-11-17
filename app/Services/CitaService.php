@@ -123,9 +123,34 @@ class CitaService
                 throw new DomainException('Servicio no válido.');
             }
 
+            $especialidad = array_search($codSrv, AgendaRecepcionService::ESPECIALIDADES, true);
+            if ($especialidad === false) {
+                throw new DomainException('Selecciona un servicio de consulta válido.');
+            }
+            if ($especialidad !== false) {
+                if ($medico->COD_ESP !== $especialidad || !app(AgendaRecepcionService::class)->opciones($codPac)->contains('codigo', $especialidad)) {
+                    throw new DomainException('La especialidad requiere consulta general, derivación y un médico correspondiente.');
+                }
+            }
+
             $slot = collect($this->horariosLibres($codEmp, $dia))->firstWhere('hora', $hora);
             if (!$slot) {
                 throw new DomainException('Ese horario ya no está disponible. Elige otro.');
+            }
+
+            DB::table('CONSULTORIO')->where('COD_CON', $slot['cod_con'])->lockForUpdate()->first();
+            $inicio = Carbon::parse($fecha.' '.$hora);
+            $fin = $inicio->copy()->addMinutes((int) config('cies.duracion_cita_min'));
+            $ocupaciones = DB::table('CITA')->where('COD_CON', $slot['cod_con'])->where('FEC_CIT', $fecha)
+                ->where(function ($q) {
+                    $q->whereIn('EST_CIT', ['Confirmada', 'Atendida'])
+                        ->orWhere(fn ($q) => $q->where('EST_CIT', 'Pendiente de pago')->where('FECEXP_CIT', '>=', now()));
+                })->get(['HOR_CIT', 'DUR_CIT']);
+            foreach ($ocupaciones as $ocupacion) {
+                $inicioOcupado = Carbon::parse($fecha.' '.$ocupacion->HOR_CIT);
+                if ($inicio->lt($inicioOcupado->copy()->addMinutes((int) $ocupacion->DUR_CIT)) && $fin->gt($inicioOcupado)) {
+                    throw new DomainException('El consultorio ya está ocupado a esa hora. Elige otro horario.');
+                }
             }
 
             $codCit = sprintf('CIT%07d', (int) DB::table('CITA')->max('id') + 1);

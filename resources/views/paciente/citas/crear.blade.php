@@ -105,10 +105,10 @@
             margin-top: 6px;
         }
     </style>
-</head>
+<link rel="stylesheet" href="{{ asset('css/paciente.css') }}"></head>
 <body>
 
-<header>Clínica CIES</header>
+<header><div class="paciente-logo"><x-brand-logo :width="155" /></div><strong>Portal del paciente</strong><a class="btn btn-sec" href="{{ route('paciente.dashboard') }}">Volver al inicio</a></header>@include('paciente._navegacion')
 
 <main>
     <section class="panel">

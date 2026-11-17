@@ -24,7 +24,7 @@
 </head>
 <body>
     <div class="caja">
-        <div class="marca">Clínica CIES</div>
+        <div class="marca"><x-brand-logo :width="170" /></div>
         @if (session('ok'))
             <div class="alerta ok">{{ session('ok') }}</div>
         @endif
