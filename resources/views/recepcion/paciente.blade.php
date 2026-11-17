@@ -23,7 +23,7 @@
                             <td>{{ $s->NROAFIL_SEG }}</td>
                             <td>{{ \Carbon\Carbon::parse($s->FECVAL_SEG)->format('d/m/Y') }}</td>
                             <td>{{ \Carbon\Carbon::parse($s->FECVEN_SEG)->format('d/m/Y') }}</td>
-                            <td><strong style="color: {{ $s->EST_SEG === 'Vigente' ? '#047857' : '#b91c1c' }};">{{ $s->EST_SEG }}</strong></td>
+                            <td><strong style="color: {{ $s->EST_SEG === 'Vigente' ? '#3b6449' : '#b91c1c' }};">{{ $s->EST_SEG }}</strong></td>
                             <td>
                                 <form method="POST" action="{{ route('recepcion.seguros.revalidar', $s->COD_SEG) }}">
                                     @csrf

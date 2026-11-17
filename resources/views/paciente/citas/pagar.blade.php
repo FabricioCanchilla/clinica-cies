@@ -1,281 +1,83 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pagar anticipo | Clínica CIES</title>
+@extends('layouts.admin')
 
-    <style>
-        * { box-sizing: border-box; }
+@section('titulo', 'Pagar anticipo')
 
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #f0fdf4;
-            color: #1e293b;
-        }
+@push('head')
+<style>
+    #codigo { letter-spacing: 10px; text-align: center; font-size: 24px; font-weight: 700; }
+    .reloj {
+        margin-bottom: 20px; padding: 12px 16px; border-radius: 10px; text-align: center; font-weight: 600;
+        background: #fffbeb; color: #92400e; border: 1px solid #fde68a;
+    }
+    #lienzo { width: 100%; height: 180px; border: 1px dashed var(--tenue); border-radius: 10px; background: #fff; touch-action: none; display: block; margin-bottom: 6px; }
+    .ayuda.firma { margin-top: 0; }
+</style>
+@endpush
 
-        header {
-            padding: 22px 8%;
-            background: linear-gradient(135deg, #047857, #10b981);
-            color: white;
-            font-size: 22px;
-            font-weight: bold;
-        }
+@section('contenido')
+<h1>Pagar el anticipo</h1>
+<p class="sub">El pago se confirma con tu firma y un código de verificación (RF008).</p>
 
-        main {
-            max-width: 720px;
-            margin: 35px auto;
-            padding: 0 20px;
-        }
+<div class="card formulario ancho">
+    <div class="resumen">
+        <div><span>Cita</span><span>{{ $cita->COD_CIT }}</span></div>
+        <div><span>Fecha y hora</span><span>{{ \Carbon\Carbon::parse($cita->FEC_CIT)->format('d/m/Y') }} a las {{ substr($cita->HOR_CIT, 0, 5) }}</span></div>
+        <div><span>Médico</span><span>{{ $cita->TIT_EMP }} {{ $cita->NOM_EMP }} {{ $cita->APE_EMP }}</span></div>
+        <div><span>Consultorio</span><span>{{ $cita->NOM_CON }}</span></div>
+        <div><span>Servicio</span><span>{{ $cita->NOM_SRV }} (Bs {{ $cita->PRE_SRV }})</span></div>
+        <div><span>Motivo</span><span>{{ $cita->MOT_CIT }}</span></div>
+        <div class="total"><span>Anticipo a pagar</span><span>Bs {{ $cita->anticipo }}</span></div>
+    </div>
 
-        .panel {
-            background: white;
-            padding: 30px;
-            border: 1px solid #d1fae5;
-            border-radius: 18px;
-        }
+    <div class="reloj"><i class="fas fa-hourglass-half"></i> Tiempo restante para pagar: <span id="reloj">--:--</span></div>
 
-        h1 { color: #065f46; margin-top: 0; }
+    @if (!$otp)
+        <form method="POST" action="{{ route('paciente.citas.otp', $cita->COD_CIT) }}">
+            @csrf
+            <button type="submit" class="btn principal bloque"><i class="fas fa-envelope"></i> Enviarme el código de verificación</button>
+            <p class="ayuda" style="margin-top: 8px;">Mandamos un código de 6 dígitos al correo registrado en tu ficha.</p>
+        </form>
+    @else
+        <form method="POST" action="{{ route('paciente.citas.confirmar', $cita->COD_CIT) }}" id="form-pago">
+            @csrf
 
-        .resumen {
-            margin: 22px 0;
-            border: 1px solid #d1fae5;
-            border-radius: 12px;
-            overflow: hidden;
-        }
+            <label for="metodo">Método de pago</label>
+            <select name="metodo" id="metodo" required>
+                <option value="">Selecciona el método</option>
+                @foreach ($metodos as $met)
+                    <option value="{{ $met->COD_MET }}" {{ old('metodo') === $met->COD_MET ? 'selected' : '' }}>{{ $met->DES_MET }}</option>
+                @endforeach
+            </select>
 
-        .resumen div {
-            display: flex;
-            justify-content: space-between;
-            gap: 16px;
-            padding: 12px 16px;
-            border-bottom: 1px solid #ecfdf5;
-        }
+            <label for="codigo">Código enviado a {{ $otp['correo'] }}</label>
+            <input type="text" name="codigo" id="codigo" inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
+                   autocomplete="one-time-code" required autofocus>
+            <p class="ayuda">Dura 5 minutos y tienes 3 intentos.</p>
 
-        .resumen div:last-child { border-bottom: none; }
+            <label>Tu firma (con el mouse o el dedo)</label>
+            <canvas id="lienzo" width="600" height="180"></canvas>
+            <p class="ayuda firma">
+                El pago se confirma con tu firma y el código (verificación en dos capas).
+                <a href="#" id="limpiar">Borrar firma</a>
+            </p>
+            <input type="hidden" name="firma" id="firma">
 
-        .resumen span:first-child { color: #64748b; }
+            <button type="submit" class="btn principal bloque"><i class="fas fa-lock"></i> Confirmar el pago</button>
+        </form>
 
-        .resumen span:last-child { font-weight: 600; text-align: right; }
+        <form method="POST" action="{{ route('paciente.citas.otp', $cita->COD_CIT) }}" style="margin-top: 10px;">
+            @csrf
+            <button type="submit" class="btn bloque"><i class="fas fa-rotate-right"></i> Enviar un código nuevo</button>
+        </form>
+    @endif
 
-        .total {
-            background: #ecfdf5;
-            color: #065f46;
-            font-size: 18px;
-        }
+    <div style="margin-top: 18px;">
+        <a class="btn" href="{{ route('paciente.dashboard') }}#mis-citas"><i class="fas fa-arrow-left"></i> Volver a mis citas</a>
+    </div>
+</div>
+@endsection
 
-        .reloj {
-            margin: 20px 0;
-            padding: 14px 16px;
-            border-radius: 10px;
-            background: #fffbeb;
-            color: #92400e;
-            border: 1px solid #fde68a;
-            text-align: center;
-            font-weight: 600;
-        }
-
-        .ok {
-            margin-bottom: 20px;
-            padding: 16px;
-            border-radius: 10px;
-            background: #ecfdf5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
-        }
-
-        .error {
-            margin-bottom: 20px;
-            padding: 16px;
-            border-radius: 10px;
-            background: #fef2f2;
-            color: #991b1b;
-            border: 1px solid #fecaca;
-        }
-
-        .error ul { margin: 0; padding-left: 20px; }
-
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .campo { margin: 20px 0; }
-
-        select, input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 15px;
-        }
-
-        #codigo {
-            letter-spacing: 10px;
-            text-align: center;
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .boton {
-            width: 100%;
-            padding: 14px;
-            background: #059669;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .boton:hover { background: #047857; }
-
-        .boton.secundario {
-            background: white;
-            color: #047857;
-            border: 2px solid #059669;
-        }
-
-        .boton.secundario:hover { background: #ecfdf5; }
-
-        .volver {
-            display: inline-block;
-            margin-top: 22px;
-            color: #047857;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .ayuda {
-            font-size: 13px;
-            color: #64748b;
-            margin-top: 6px;
-        }
-    </style>
-</head>
-<body>
-
-<header>Clínica CIES</header>
-
-<main>
-    <section class="panel">
-
-        <h1>Pagar el anticipo</h1>
-
-        @if (session('ok'))
-            <div class="ok">{{ session('ok') }}</div>
-        @endif
-
-        @if ($errors->any())
-            <div class="error">
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <div class="resumen">
-            <div>
-                <span>Cita</span>
-                <span>{{ $cita->COD_CIT }}</span>
-            </div>
-            <div>
-                <span>Fecha y hora</span>
-                <span>{{ \Carbon\Carbon::parse($cita->FEC_CIT)->format('d/m/Y') }} a las {{ substr($cita->HOR_CIT, 0, 5) }}</span>
-            </div>
-            <div>
-                <span>Médico</span>
-                <span>{{ $cita->TIT_EMP }} {{ $cita->NOM_EMP }} {{ $cita->APE_EMP }}</span>
-            </div>
-            <div>
-                <span>Consultorio</span>
-                <span>{{ $cita->NOM_CON }}</span>
-            </div>
-            <div>
-                <span>Servicio</span>
-                <span>{{ $cita->NOM_SRV }} (Bs {{ $cita->PRE_SRV }})</span>
-            </div>
-            <div>
-                <span>Motivo</span>
-                <span>{{ $cita->MOT_CIT }}</span>
-            </div>
-            <div class="total">
-                <span>Anticipo a pagar</span>
-                <span>Bs {{ $cita->anticipo }}</span>
-            </div>
-        </div>
-
-        <div class="reloj">
-            Tiempo restante para pagar: <span id="reloj">--:--</span>
-        </div>
-
-        @if (!$otp)
-
-            <form method="POST" action="{{ route('paciente.citas.otp', $cita->COD_CIT) }}">
-                @csrf
-                <button type="submit" class="boton">Enviarme el código de verificación</button>
-                <p class="ayuda">Mandamos un código de 6 dígitos al correo registrado en tu ficha.</p>
-            </form>
-
-        @else
-
-            <form method="POST" action="{{ route('paciente.citas.confirmar', $cita->COD_CIT) }}" id="form-pago">
-                @csrf
-
-                <div class="campo">
-                    <label for="metodo">Método de pago</label>
-                    <select name="metodo" id="metodo" required>
-                        <option value="">Selecciona el método</option>
-                        @foreach ($metodos as $met)
-                            <option value="{{ $met->COD_MET }}" {{ old('metodo') === $met->COD_MET ? 'selected' : '' }}>
-                                {{ $met->DES_MET }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="campo">
-                    <label for="codigo">Código enviado a {{ $otp['correo'] }}</label>
-                    <input type="text" name="codigo" id="codigo"
-                           inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
-                           autocomplete="one-time-code" required autofocus>
-                    <p class="ayuda">Dura 5 minutos y tienes 3 intentos.</p>
-                </div>
-
-                <div class="campo">
-                    <label>Tu firma (con el mouse o el dedo)</label>
-                    <canvas id="lienzo" width="600" height="180"
-                            style="width: 100%; height: 180px; border: 1px dashed #94a3b8; border-radius: 10px; background: #fff; touch-action: none; display: block;"></canvas>
-                    <p class="ayuda">
-                        El pago se confirma con tu firma y el código (verificación en dos capas).
-                        <a href="#" id="limpiar">Borrar firma</a>
-                    </p>
-                    <input type="hidden" name="firma" id="firma">
-                </div>
-
-                <button type="submit" class="boton">Confirmar el pago</button>
-            </form>
-
-            <form method="POST" action="{{ route('paciente.citas.otp', $cita->COD_CIT) }}" style="margin-top: 12px;">
-                @csrf
-                <button type="submit" class="boton secundario">Enviar un código nuevo</button>
-            </form>
-
-        @endif
-
-        <a class="volver" href="{{ route('paciente.dashboard') }}">
-            Volver a mi panel
-        </a>
-
-    </section>
-</main>
-
+@push('scripts')
 <script>
     const VENCE = new Date('{{ \Carbon\Carbon::parse($cita->FECEXP_CIT)->toIso8601String() }}').getTime();
     const reloj = document.getElementById('reloj');
@@ -327,6 +129,4 @@
         });
     })();
 </script>
-
-</body>
-</html>
+@endpush

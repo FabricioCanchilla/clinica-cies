@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Clínica CIES — Portal Institucional y Acceso</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -19,9 +20,9 @@
 
         /* ----- PALETA DE COLORES CIES (VERDE) ----- */
         :root {
-            --cies-green: #059669; /* Verde principal */
-            --cies-green-dark: #047857; /* Verde hover */
-            --cies-green-light: #ecfdf5; /* Fondo suave verde */
+            --cies-green: #43704f; /* Verde principal */
+            --cies-green-dark: #3b6449; /* Verde hover */
+            --cies-green-light: #eef5f0; /* Fondo suave verde */
             --cies-text: #0f172a;
             --cies-text-muted: #64748b;
         }
@@ -41,7 +42,11 @@
             align-items: center;
             justify-content: space-between;
         }
-        .logo-container { display: flex; align-items: center; gap: 10px; }
+        .logo-container { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .logo-img { height: 52px; width: auto; display: block; }
+        .modal-logo { display: block; height: 46px; margin: 0 auto 14px; }
+        .footer-logo { display: inline-block; background: #fff; border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; }
+        .footer-logo img { height: 40px; display: block; }
         .logo-badge { 
             background: var(--cies-green); 
             color: #ffffff; 
@@ -72,7 +77,7 @@
             font-size: 14px;
             font-weight: 600;
             text-decoration: none;
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+            box-shadow: 0 4px 12px rgba(76, 125, 95, 0.25);
             transition: background 0.2s;
         }
         .btn-appointment:hover { background: var(--cies-green-dark); }
@@ -139,7 +144,7 @@
             display: inline-flex;
             align-items: center;
             gap: 10px;
-            box-shadow: 0 10px 20px -5px rgba(5, 150, 105, 0.4);
+            box-shadow: 0 10px 20px -5px rgba(76, 125, 95, 0.4);
             transition: transform 0.2s, background 0.2s;
         }
         .btn-primary-action:hover { 
@@ -232,7 +237,7 @@
         .modal-box label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px; }
         .modal-box input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 14px; font-size: 14px; background: #f8fafc; color: #0f172a; }
         .modal-box .reg-select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 14px; font-size: 14px; background: #f8fafc; color: #0f172a; }
-        .modal-box input:focus { outline: none; border-color: var(--cies-green); background: #fff; box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15); }
+        .modal-box input:focus { outline: none; border-color: var(--cies-green); background: #fff; box-shadow: 0 0 0 3px rgba(76, 125, 95, 0.15); }
 
         .btn-submit-main {
             width: 100%;
@@ -276,13 +281,9 @@
 
     <!-- BARRA SUPERIOR -->
     <header class="header">
-        <div class="logo-container">
-            <div class="logo-badge"><i class="fas fa-plus"></i></div>
-            <div>
-                <div class="logo-title">Clínica CIES</div>
-                <div class="logo-subtitle">Salud Integral y Especializada</div>
-            </div>
-        </div>
+        <a href="#inicio" class="logo-container" title="Clínica CIES">
+            <img src="{{ asset('images/logo-cies.png') }}" alt="CIES · Salud sexual, salud reproductiva, salud integral" class="logo-img">
+        </a>
 
         <ul class="nav-links">
             <li><a href="#inicio">Inicio</a></li>
@@ -411,7 +412,7 @@
                     <p>Desarrollamos proyectos de investigación médica y estudios epidemiológicos enfocados en elevar la calidad asistencial y los protocolos de salud pública.</p>
                 </div>
                 <div class="info-card" id="impacto" style="background: white;">
-                    <span class="tag" style="background: rgba(16, 185, 129, 0.1); color: #059669;">Impacto Social</span>
+                    <span class="tag" style="background: rgba(76, 125, 95, 0.1); color: #43704f;">Impacto Social</span>
                     <h3>Programas y Atención Solidaria</h3>
                     <p>Llevamos brigadas móviles y campañas de salud preventiva gratuita a comunidades y sectores vulnerables de la población.</p>
                 </div>
@@ -446,6 +447,7 @@
     <footer id="contacto">
         <div class="footer-content">
             <div>
+                <div class="footer-logo"><img src="{{ asset('images/logo-cies.png') }}" alt="Clínica CIES"></div>
                 <h4>Clínica CIES - Sedes</h4>
                 <p>Sede Central: Av. Principal #123</p>
                 <p>Sucursal Norte: Av. Las Américas #45</p>
@@ -480,11 +482,12 @@
     <div class="modal" id="loginModal">
         <div class="modal-box">
             <button class="close-btn" onclick="closeLoginModal()">&times;</button>
+            <img src="{{ asset('images/logo-cies.png') }}" alt="Clínica CIES" class="modal-logo">
             <h2 style="font-size: 22px; color: #0f172a; margin-bottom: 4px; font-weight: 700;">Iniciar Sesión</h2>
             <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Accede a tus citas e historial médico institucional</p>
 
             @if (session('ok'))
-                <div class="error-box" style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;">{{ session('ok') }}</div>
+                <div class="error-box" style="background: #eef5f0; color: #3b6449; border-color: #c9ddd0;">{{ session('ok') }}</div>
             @endif
             @if ($errors->any())
                 <div class="error-box">{{ $errors->first() }}</div>
@@ -520,6 +523,7 @@
     <div class="modal" id="registerModal">
         <div class="modal-box" style="max-width: 620px; max-height: 92vh; overflow-y: auto;">
             <button class="close-btn" onclick="closeRegisterModal()">&times;</button>
+            <img src="{{ asset('images/logo-cies.png') }}" alt="Clínica CIES" class="modal-logo">
             <h2 style="font-size: 22px; color: #0f172a; margin-bottom: 4px; font-weight: 700;">Crear Cuenta de Paciente</h2>
             <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Regístrate para gestionar tus citas médicas. Tu usuario será tu número de CI.</p>
 

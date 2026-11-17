@@ -30,7 +30,7 @@
                             <td>{{ $c->EST_CIT }}</td>
                             <td>
                                 @if ($c->CHECKIN)
-                                    <span style="color:#047857; font-weight:700;"><i class="fas fa-check"></i> {{ \Carbon\Carbon::parse($c->CHECKIN)->format('H:i') }}</span>
+                                    <span style="color:#3b6449; font-weight:700;"><i class="fas fa-check"></i> {{ \Carbon\Carbon::parse($c->CHECKIN)->format('H:i') }}</span>
                                 @elseif ($c->EST_CIT === 'Confirmada' && $c->FUERA_TOLERANCIA)
                                     <span style="color:#b91c1c; font-weight:600;">Fuera de tolerancia</span>
                                 @else
@@ -83,11 +83,11 @@
     <div class="grid">
         @foreach ($consultorios as $k)
             <div class="card">
-                <div class="num" style="font-size: 20px; color: {{ $k->OCUPADO ? '#b91c1c' : '#047857' }};">{{ $k->OCUPADO ? 'Ocupado' : 'Libre' }}</div>
+                <div class="num" style="font-size: 20px; color: {{ $k->OCUPADO ? '#b91c1c' : '#3b6449' }};">{{ $k->OCUPADO ? 'Ocupado' : 'Libre' }}</div>
                 <div class="lbl">{{ $k->NOM_CON }} · {{ $k->UBI_CON }}</div>
             </div>
         @endforeach
-        @foreach (['Disponible' => '#047857', 'Ocupada' => '#b91c1c', 'Limpieza' => '#92400e'] as $est => $color)
+        @foreach (['Disponible' => '#3b6449', 'Ocupada' => '#b91c1c', 'Limpieza' => '#92400e'] as $est => $color)
             <div class="card">
                 <div class="num" style="font-size: 20px; color: {{ $color }};">{{ $camas[$est] ?? 0 }}</div>
                 <div class="lbl">Camas en estado «{{ $est }}»</div>

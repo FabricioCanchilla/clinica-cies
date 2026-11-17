@@ -16,7 +16,7 @@
 
     <form method="POST" action="{{ route('login.2fa.reenviar') }}" style="margin-top:10px;">
         @csrf
-        <button type="submit" style="background:transparent; color:#059669; border:1px solid #a7f3d0;">Enviar un código nuevo</button>
+        <button type="submit" style="background:transparent; color:#43704f; border:1px solid #c9ddd0;">Enviar un código nuevo</button>
     </form>
 
     <a class="volver" href="{{ route('login') }}">Volver al inicio de sesión</a>

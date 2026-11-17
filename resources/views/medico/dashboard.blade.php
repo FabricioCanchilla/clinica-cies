@@ -1,104 +1,22 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Médico - Clínica CIES</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        cies: '#10b981',       // Verde Esmeralda
-                        ciesdark: '#059669',   // Esmeralda oscuro
-                        bglight: '#f8fafc',    // Fondo general claro
-                        borderlight: '#e2e8f0' // Bordes suaves
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        /* Scrollbar personalizado para modo claro */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    </style>
-    <style>
-        /* RNF011: etiquetas por estado real de la cita */
-        .estado-pendiente-de-pago { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
-        .estado-confirmada       { background: #d1fae5; color: #047857; border-color: #10b981; }
-        .estado-atendida         { background: #dbeafe; color: #1d4ed8; border-color: #3b82f6; }
-        .estado-cancelada        { background: #fee2e2; color: #b91c1c; border-color: #ef4444; }
-        .estado-expirada         { background: #f1f5f9; color: #64748b; border-color: #94a3b8; }
-        .estado-no-asistio       { background: #fce7f3; color: #9d174d; border-color: #ec4899; }
-    </style>
-</head>
-<body class="bg-bglight font-sans text-slate-800 min-h-screen flex">
+@extends('layouts.admin')
 
-    <!-- Sidebar (Menú Lateral) - Blanco con acentos verdes -->
-    <aside class="w-64 bg-white border-r border-borderlight flex flex-col hidden md:flex shadow-sm z-10">
-        <div class="h-16 flex items-center px-6 border-b border-borderlight">
-            <span class="text-xl font-bold text-slate-900 tracking-wide">Clínica <span class="text-cies">CIES</span></span>
-        </div>
-        <nav class="flex-1 py-4 flex flex-col gap-1">
-            <a href="{{ route('medico.dashboard') }}" class="flex items-center gap-3 px-6 py-3 bg-emerald-50 text-cies border-l-4 border-cies font-semibold transition">
-                <i class="fas fa-home"></i> Dashboard
-            </a>
-            <div class="px-6 mt-6 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Gestión Clínica</div>
-            <a href="#" class="flex items-center gap-3 px-6 py-3 text-slate-600 hover:text-cies hover:bg-slate-50 transition font-medium">
-                <i class="fas fa-folder-open text-slate-400"></i> Historias Clínicas
-            </a>
-            <a href="#" class="flex items-center gap-3 px-6 py-3 text-slate-600 hover:text-cies hover:bg-slate-50 transition font-medium">
-                <i class="fas fa-prescription text-slate-400"></i> Recetas
-            </a>
-            <a href="#" class="flex items-center gap-3 px-6 py-3 text-slate-600 hover:text-cies hover:bg-slate-50 transition font-medium">
-                <i class="fas fa-vial text-slate-400"></i> Exámenes
-            </a>
-            <a href="#" class="flex items-center gap-3 px-6 py-3 text-slate-600 hover:text-cies hover:bg-slate-50 transition font-medium">
-                <i class="fas fa-notes-medical text-slate-400"></i> Notas Evolución
-            </a>
-        </nav>
-    </aside>
+@section('titulo', 'Mi agenda')
+@section('encabezado', 'Portal Médico')
 
-    <!-- Contenido Principal -->
-    <div class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        
-        <!-- Header - Blanco -->
-        <header class="h-16 bg-white border-b border-borderlight flex items-center justify-between px-6 shadow-sm z-10 shrink-0">
-            <h1 class="text-lg font-bold text-slate-800">Portal Médico</h1>
-            <div class="flex items-center gap-4 text-sm">
-                <span class="text-slate-600 font-medium"><i class="fas fa-user-md text-cies mr-1"></i> Dr(a). {{ auth()->user()->USR_USR }}</span>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-1.5 rounded-lg transition text-xs font-semibold shadow-sm">
-                        Cerrar sesión
-                    </button>
-                </form>
-            </div>
-        </header>
+@push('head')
+    @include('medico._tailwind')
+@endpush
 
-        <!-- Contenido Central con Scroll -->
-        <main class="flex-1 p-8 overflow-y-auto">
+@section('contenido')
+<div class="vista-medico">
             
             <div class="mb-6">
                 <h2 class="text-2xl font-bold text-slate-900">Mi Agenda</h2>
                 <p class="text-slate-500 text-sm mt-1">Gestione sus citas y consultas del mes.</p>
             </div>
 
-            @if (session('ok'))
-                <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-semibold">{{ session('ok') }}</div>
-            @endif
-            @if ($errors->any())
-                <div class="mb-4 rounded-xl border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm font-semibold">{{ $errors->first() }}</div>
-            @endif
-
             <!-- RF021: programación del día -->
-            <div class="bg-white rounded-2xl shadow-sm border border-borderlight p-5 mb-6">
+            <div id="citas-hoy" class="bg-white rounded-2xl shadow-sm border border-borderlight p-5 mb-6">
                 <h3 class="text-base font-bold text-slate-800 mb-3"><i class="fas fa-calendar-day text-cies mr-1"></i> Citas de hoy ({{ \Carbon\Carbon::today()->format('d/m/Y') }})</h3>
                 @if ($hoy->isEmpty())
                     <p class="text-sm text-slate-500">No tiene citas programadas para hoy.</p>
@@ -120,7 +38,7 @@
                                         <td class="py-2"><span class="estado-{{ \Illuminate\Support\Str::slug($c['estado']) }} text-[11px] px-2.5 py-1 rounded-full font-bold">{{ $c['estado'] }}</span></td>
                                         <td class="py-2">
                                             @if ($c['estado'] === 'Confirmada')
-                                                <a href="{{ route('medico.atender', $c['codigo']) }}" class="bg-cies text-white text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap" style="background:#059669;">
+                                                <a href="{{ route('medico.atender', $c['codigo']) }}" class="bg-cies text-white text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap">
                                                     <i class="fas fa-stethoscope"></i> Atender
                                                 </a>
                                             @endif
@@ -134,7 +52,7 @@
             </div>
 
             <!-- Calendario - ELIMINADA LA ALTURA FIJA -->
-            <div x-data="calendarioApp({{ json_encode($citas) }})" class="bg-white rounded-2xl shadow-sm border border-borderlight overflow-hidden flex flex-col mb-8">
+            <div id="agenda" x-data="calendarioApp({{ json_encode($citas) }})" class="bg-white rounded-2xl shadow-sm border border-borderlight overflow-hidden flex flex-col mb-8">
                 
                 <!-- Controles del Calendario -->
                 <div class="p-5 border-b border-borderlight flex justify-between items-center bg-white">
@@ -244,10 +162,10 @@
                 </div>
 
             </div>
-        </main>
-    </div>
+</div>
+@endsection
 
-    <!-- Script de Alpine.js para el Calendario -->
+@push('scripts')
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('calendarioApp', (citas) => ({
@@ -325,5 +243,4 @@
             }))
         })
     </script>
-</body>
-</html>
+@endpush

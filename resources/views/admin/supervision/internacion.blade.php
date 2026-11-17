@@ -7,7 +7,7 @@
     <p class="sub">Estado de las camas (RN39) e internaciones registradas (solo lectura).</p>
 
     <div class="grid">
-        @foreach (['Disponible' => '#047857', 'Ocupada' => '#b91c1c', 'Limpieza' => '#92400e'] as $est => $color)
+        @foreach (['Disponible' => '#3b6449', 'Ocupada' => '#b91c1c', 'Limpieza' => '#92400e'] as $est => $color)
             <div class="card"><div class="num" style="color: {{ $color }};">{{ $porEstado[$est] ?? 0 }}</div><div class="lbl">Camas «{{ $est }}»</div></div>
         @endforeach
     </div>
