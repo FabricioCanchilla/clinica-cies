@@ -459,6 +459,7 @@
                         <th style="padding: 12px;">Fecha</th>
                         <th style="padding: 12px;">Estado</th>
                         <th style="padding: 12px;">Observaciones</th>
+                        <th style="padding: 12px;"></th>
                     </tr>
                 </thead>
 
@@ -468,7 +469,7 @@
                         <tr style="border-bottom: 1px solid #e2e8f0;">
 
                             <td style="padding: 12px;">
-                                {{ $receta->FEC_REC }}
+                                {{ \Carbon\Carbon::parse($receta->FEC_REC)->format('d/m/Y') }}
                             </td>
 
                             <td style="padding: 12px;">
@@ -477,6 +478,13 @@
 
                             <td style="padding: 12px;">
                                 {{ $receta->OBS_REC ?? 'Sin observaciones' }}
+                            </td>
+
+                            <td style="padding: 12px;">
+                                <a href="{{ route('paciente.recetas.pdf', $receta->COD_REC) }}" target="_blank"
+                                   style="background:#eef2ff; color:#3730a3; padding:5px 12px; border-radius:999px; text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap;">
+                                    <i class="fas fa-file-pdf"></i> Descargar PDF
+                                </a>
                             </td>
 
                         </tr>

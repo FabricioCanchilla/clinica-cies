@@ -148,4 +148,41 @@ class DashboardController extends Controller
 
         return redirect()->route('paciente.dashboard')->with('ok', 'Tus datos se actualizaron.');
     }
+
+    /** RF011: descarga de la receta en PDF (dompdf), solo las del propio paciente. */
+    public function recetaPdf(string $codRec)
+    {
+        $codPac = auth()->user()->COD_PAC;
+        abort_if(!$codPac, 403);
+
+        $r = DB::table('RECETA as r')
+            ->join('CONSULTA as co', 'co.COD_CNS', '=', 'r.COD_CNS')
+            ->join('CITA as ci', 'ci.COD_CIT', '=', 'co.COD_CIT')
+            ->join('EMPLEADO as e', 'e.COD_EMP', '=', 'co.COD_EMP')
+            ->join('PACIENTE as p', 'p.COD_PAC', '=', 'ci.COD_PAC')
+            ->where('r.COD_REC', $codRec)->where('ci.COD_PAC', $codPac)
+            ->first(['r.*', 'co.DIA_CNS', 'e.TIT_EMP', 'e.NOM_EMP', 'e.APE_EMP', 'p.NOM_PAC', 'p.APE_PAC', 'p.CI_PAC', 'p.COD_PAC']);
+        abort_if(!$r, 404);
+
+        $items = DB::table('DETALLE_RECETA as d')
+            ->join('MEDICAMENTO as m', 'm.COD_MED', '=', 'd.COD_MED')
+            ->join('VIA_ADMIN as v', 'v.COD_VIA', '=', 'd.COD_VIA')
+            ->where('d.COD_REC', $codRec)
+            ->get(['m.DES_MED', 'd.DOS_DRE', 'd.FRE_DRE', 'd.DUR_DRE', 'v.DES_VIA']);
+
+        $html = view('paciente.receta-pdf', ['r' => $r, 'items' => $items])->render();
+
+        $dompdf = new \Dompdf\Dompdf();
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A5', 'portrait');
+        $dompdf->render();
+
+        \App\Services\Auditoria::registrar('Descargar receta', 'Baja', 'DOM03', 'RECETA', $codRec,
+            "El paciente descargó la receta {$codRec} en PDF", codPac: $codPac);
+
+        return response($dompdf->output(), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => "inline; filename=\"{$codRec}.pdf\"",
+        ]);
+    }
 }
