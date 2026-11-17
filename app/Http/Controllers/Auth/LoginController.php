@@ -9,10 +9,18 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use App\Services\Auditoria;
+use App\Services\OtpClient;
+use DomainException;
+use Illuminate\Support\Facades\DB;
 
 class LoginController extends Controller
 {
     private const MAX_INTENTOS = 3;
+
+    /** RN05: roles con segundo factor obligatorio (Administrador, Caja, Auditor). */
+    private const ROLES_2FA = ['ROL001', 'ROL005', 'ROL009'];
+
+    public function __construct(private OtpClient $otp) {}
 
     public function showForm()
     {
@@ -93,8 +101,111 @@ class LoginController extends Controller
             return back()->withErrors($errorGenerico)->onlyInput('usuario');
         }
 
-        // Login correcto
+        // Contraseña correcta
         $user->INTFAL_USR = 0;
+        $user->save();
+
+        // RN05: Administrador, Auditor y Caja validan además un OTP enviado a su correo
+        if (in_array(trim($user->COD_ROL), self::ROLES_2FA, true)) {
+            return $this->iniciarSegundoFactor($request, $user);
+        }
+
+        return $this->completarLogin($request, $user);
+    }
+
+    /** RN05 / RN12: genera el OTP de inicio de sesión y pide el código. */
+    private function iniciarSegundoFactor(Request $request, Usuario $user)
+    {
+        $correo = DB::table('EMPLEADO')->where('COD_EMP', $user->COD_EMP)->value('COR_EMP');
+        if (!$correo) {
+            return back()->withErrors(['usuario' => 'La cuenta no tiene un correo registrado para el segundo factor. Contacta al administrador.'])->onlyInput('usuario');
+        }
+
+        try {
+            $r = $this->otp->generar($user->COD_USR, 'INICIO_SESION', 'CORREO', $correo);
+        } catch (DomainException $e) {
+            // RN13: sin OTP no se confirma el ingreso
+            Auditoria::registrar('Fallo envio OTP', 'Media', 'DOM02', 'OTP', $user->COD_USR,
+                mb_substr('Segundo factor: ' . $e->getMessage(), 0, 255), $user);
+            return back()->withErrors(['usuario' => $e->getMessage()])->onlyInput('usuario');
+        }
+
+        $request->session()->put('login_2fa', [
+            'codUsr' => $user->COD_USR,
+            'codOtp' => $r['codOtp'],
+            'correo' => $correo,
+        ]);
+
+        return redirect()->route('login.2fa');
+    }
+
+    public function form2fa(Request $request)
+    {
+        $pend = $request->session()->get('login_2fa');
+        if (!$pend) {
+            return redirect()->route('login');
+        }
+
+        return view('auth.segundo-factor', ['correo' => $this->enmascarar($pend['correo'])]);
+    }
+
+    public function verificar2fa(Request $request)
+    {
+        $pend = $request->session()->get('login_2fa');
+        if (!$pend) {
+            return redirect()->route('login');
+        }
+
+        $request->validate(['codigo' => ['required', 'digits:6']], [
+            'codigo.required' => 'Escribe el código de 6 dígitos.',
+            'codigo.digits'   => 'El código tiene 6 dígitos.',
+        ]);
+
+        $user = Usuario::where('COD_USR', $pend['codUsr'])->first();
+        if (!$user || $user->EST_USR !== 'Activo') {
+            $request->session()->forget('login_2fa');
+            return redirect()->route('login')->withErrors(['usuario' => 'Usuario o contraseña incorrectos.']);
+        }
+
+        try {
+            $res = $this->otp->validar($pend['codOtp'], $request->codigo);
+        } catch (DomainException $e) {
+            return back()->withErrors(['codigo' => $e->getMessage()]);
+        }
+
+        if (!$res['valido']) {
+            Auditoria::registrar('OTP login fallido', 'Media', 'DOM02', 'OTP', $user->COD_USR,
+                "Código incorrecto en el segundo factor de {$user->USR_USR}", $user);
+            return back()->withErrors(['codigo' => OtpClient::mensajeMotivo($res)]);
+        }
+
+        $request->session()->forget('login_2fa');
+
+        return $this->completarLogin($request, $user, true);
+    }
+
+    public function reenviar2fa(Request $request)
+    {
+        $pend = $request->session()->get('login_2fa');
+        $user = $pend ? Usuario::where('COD_USR', $pend['codUsr'])->first() : null;
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        try {
+            $r = $this->otp->generar($user->COD_USR, 'INICIO_SESION', 'CORREO', $pend['correo']);
+        } catch (DomainException $e) {
+            return back()->withErrors(['codigo' => $e->getMessage()]);
+        }
+
+        $pend['codOtp'] = $r['codOtp'];
+        $request->session()->put('login_2fa', $pend);
+
+        return back()->with('ok', 'Te enviamos un código nuevo.');
+    }
+
+    private function completarLogin(Request $request, Usuario $user, bool $con2fa = false)
+    {
         $user->FECULT_USR = now();
         $user->save();
 
@@ -103,10 +214,16 @@ class LoginController extends Controller
 
         Auditoria::registrar(
             'Login', 'Baja', 'DOM02', 'USUARIO', $user->COD_USR,
-            "Inicio de sesión de {$user->USR_USR}"
+            "Inicio de sesión de {$user->USR_USR}" . ($con2fa ? ' con segundo factor OTP' : '')
         );
 
         return redirect()->route('panel');
+    }
+
+    private function enmascarar(string $correo): string
+    {
+        [$u, $d] = array_pad(explode('@', $correo, 2), 2, '');
+        return mb_substr($u, 0, 2) . str_repeat('*', max(1, mb_strlen($u) - 2)) . '@' . $d;
     }
 
     /**

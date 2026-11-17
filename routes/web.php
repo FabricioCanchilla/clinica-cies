@@ -23,6 +23,13 @@ Route::get('/', fn () => redirect()->route('panel'));
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login'])->name('login.post');
+
+    // RN05: segundo factor OTP para Administrador, Caja y Auditor
+    Route::get('/login/verificar', [LoginController::class, 'form2fa'])->name('login.2fa');
+    Route::post('/login/verificar', [LoginController::class, 'verificar2fa'])
+        ->middleware('throttle:10,1')->name('login.2fa.verificar');
+    Route::post('/login/reenviar', [LoginController::class, 'reenviar2fa'])
+        ->middleware('throttle:3,1')->name('login.2fa.reenviar');
     
     // RF005 / RN04: recuperación con enlace firmado de 30 min y un solo uso
     Route::get('/recuperar-contrasena', [RecuperacionController::class, 'form'])->name('password.request');
@@ -123,6 +130,9 @@ foreach ($secciones as $slug => $titulo) {
     // 3. Panel de Médico
     Route::middleware('rol:ROL003')->prefix('medico')->name('medico.')->group(function () {
         Route::get('/', [MedicoDashboardController::class, 'index'])->name('dashboard');
+        // RF020: atender la cita (consulta + nota de evolución) y pasarla a Atendida
+        Route::get('/citas/{codCit}/atender', [\App\Http\Controllers\Medico\AtencionController::class, 'form'])->name('atender');
+        Route::post('/citas/{codCit}/atender', [\App\Http\Controllers\Medico\AtencionController::class, 'guardar'])->name('atender.guardar');
     });
     // Panel de Laboratorio (ROL007)
     Route::middleware('rol:ROL007')->prefix('laboratorio')->name('laboratorio.')->group(function () {
@@ -165,6 +175,14 @@ foreach ($secciones as $slug => $titulo) {
         Route::get('/citas/{codCit}/comprobante', [PacienteCitaController::class, 'comprobantePdf'])->name('citas.comprobante');
         // RF016: comprobantes de los insumos que entregaron sus familiares
         Route::get('/insumos/{nroCen}/comprobante', [PacienteCitaController::class, 'comprobanteInsumoPdf'])->name('insumos.comprobante');
+
+        // RF009: cancelación y reprogramación (RN21, RN22)
+        Route::post('/citas/{codCit}/cancelar', [PacienteCitaController::class, 'cancelar'])->name('citas.cancelar');
+        Route::get('/citas/{codCit}/reprogramar', [PacienteCitaController::class, 'reprogramarForm'])->name('citas.reprogramar');
+        Route::post('/citas/{codCit}/reprogramar', [PacienteCitaController::class, 'reprogramar'])->name('citas.reprogramar.guardar');
+
+        // RF014: mi perfil
+        Route::post('/perfil', [PacienteDashboardController::class, 'actualizarPerfil'])->name('perfil.actualizar');
     });
 
     // Panel de Enfermería (ROL004): RF031 recepción de insumos y RF032 firma + OTP + comprobante (RN36)

@@ -206,6 +206,152 @@ class CitaService
             ->get();
     }
 
+    // ---------- RF009: cancelación y reprogramación (RN21, RN22, RN25) ----------
+
+    private const HORAS_LIMITE = 24;
+    private const MAX_REPROGRAMACIONES = 2;
+
+    /** Cita del paciente que todavía puede cambiar (Confirmada o Pendiente de pago vigente). */
+    private function citaModificable(string $codCit, string $codPac): object
+    {
+        $c = DB::table('CITA as c')
+            ->join('SERVICIO as s', 's.COD_SRV', '=', 'c.COD_SRV')
+            ->where('c.COD_CIT', $codCit)->where('c.COD_PAC', $codPac)
+            ->lockForUpdate()
+            ->select('c.*', 's.NOM_SRV')
+            ->first();
+        if (!$c) {
+            throw new DomainException('La cita no existe.');
+        }
+        // RN25: Atendida, Cancelada, Expirada o No asistio ya no cambian de estado
+        if (!in_array($c->EST_CIT, ['Confirmada', 'Pendiente de pago'], true)) {
+            throw new DomainException("La cita está {$c->EST_CIT} y ya no se puede modificar.");
+        }
+        return $c;
+    }
+
+    public function horasParaLaCita(object $c): float
+    {
+        $inicio = Carbon::parse($c->FEC_CIT . ' ' . $c->HOR_CIT);
+        return Carbon::now()->diffInMinutes($inicio, false) / 60;
+    }
+
+    /** Veces que se reprogramó la cita (se cuentan en la auditoría, sin columna nueva). */
+    public function reprogramaciones(string $codCit): int
+    {
+        return DB::table('AUDITORIA')
+            ->where('ENT_AUD', 'CITA')->where('REG_AUD', $codCit)
+            ->where('ACC_AUD', 'Reprogramar cita')
+            ->count();
+    }
+
+    /**
+     * RN21: hasta 24 h antes se devuelve el 100 % del anticipo; con menos de 24 h el anticipo se pierde.
+     * Devuelve el mensaje para el paciente.
+     */
+    public function cancelar(string $codCit, string $codPac): string
+    {
+        return DB::transaction(function () use ($codCit, $codPac) {
+            $c = $this->citaModificable($codCit, $codPac);
+
+            $anticipo = (float) DB::table('PAGO')
+                ->where('COD_CIT', $codCit)->where('TIP_PAG', 'Adelanto')->where('EST_PAG', 'Confirmado')
+                ->sum('MON_PAG');
+
+            $horas = $this->horasParaLaCita($c);
+            $conDevolucion = $horas >= self::HORAS_LIMITE;
+
+            DB::table('CITA')->where('COD_CIT', $codCit)->update(['EST_CIT' => 'Cancelada', 'FECEXP_CIT' => null]);
+
+            if ($anticipo <= 0) {
+                $detalle = 'Cancelada por el paciente sin anticipo pagado';
+                $msg = 'Cita cancelada. El horario quedó libre.';
+            } elseif ($conDevolucion) {
+                $detalle = 'Cancelada por el paciente con ' . floor($horas) . ' h de anticipación: devolución del 100 % del anticipo (Bs ' . number_format($anticipo, 2) . ')';
+                $msg = 'Cita cancelada con más de 24 horas de anticipación: se te devolverá el 100 % del anticipo (Bs ' . number_format($anticipo, 2) . ') en caja.';
+            } else {
+                $detalle = 'Cancelada por el paciente con menos de 24 h: el anticipo (Bs ' . number_format($anticipo, 2) . ') se pierde';
+                $msg = 'Cita cancelada con menos de 24 horas de anticipación: según RN21 el anticipo no se devuelve.';
+            }
+
+            Auditoria::registrar('Cancelar cita', 'Media', 'DOM04', 'CITA', $codCit, $detalle, codPac: $codPac);
+            $this->notificarPaciente($codPac, 'Cita cancelada', "Tu cita {$codCit} del " . Carbon::parse($c->FEC_CIT)->format('d/m/Y') . ' fue cancelada.', $codCit);
+
+            return $msg;
+        });
+    }
+
+    /** RN22: hasta 24 h antes, máximo 2 veces por cita; el anticipo pagado se traslada a la nueva fecha. */
+    public function reprogramar(string $codCit, string $codPac, string $fecha, string $hora): object
+    {
+        if (!Carbon::hasFormat($fecha, 'Y-m-d')) {
+            throw new DomainException('Fecha inválida.');
+        }
+        $dia = Carbon::createFromFormat('Y-m-d', $fecha)->startOfDay();
+        $max = (int) config('cies.dias_max_anticipacion');
+        if ($dia->lt(Carbon::today()) || $dia->gt(Carbon::today()->addDays($max))) {
+            throw new DomainException("La nueva fecha debe estar entre hoy y los próximos {$max} días.");
+        }
+
+        return DB::transaction(function () use ($codCit, $codPac, $dia, $fecha, $hora) {
+            $c = $this->citaModificable($codCit, $codPac);
+
+            if ($c->EST_CIT !== 'Confirmada') {
+                throw new DomainException('Solo se reprograman citas confirmadas (con el anticipo pagado).');
+            }
+            if ($this->horasParaLaCita($c) < self::HORAS_LIMITE) {
+                throw new DomainException('Solo se puede reprogramar hasta 24 horas antes de la cita.');
+            }
+            $veces = $this->reprogramaciones($codCit);
+            if ($veces >= self::MAX_REPROGRAMACIONES) {
+                throw new DomainException('Esta cita ya se reprogramó 2 veces, que es el máximo permitido.');
+            }
+
+            // Serializa con las reservas del mismo médico
+            DB::table('EMPLEADO')->where('COD_EMP', $c->COD_EMP)->lockForUpdate()->first();
+
+            $slot = collect($this->horariosLibres($c->COD_EMP, $dia))->firstWhere('hora', $hora);
+            if (!$slot) {
+                throw new DomainException('Ese horario ya no está disponible. Elige otro.');
+            }
+
+            $anterior = Carbon::parse($c->FEC_CIT)->format('d/m/Y') . ' ' . substr($c->HOR_CIT, 0, 5);
+
+            // Se mueve la misma cita: el anticipo (PAGO de la cita) se traslada solo
+            DB::table('CITA')->where('COD_CIT', $codCit)->update([
+                'FEC_CIT' => $fecha,
+                'HOR_CIT' => $hora . ':00',
+                'COD_CON' => $slot['cod_con'],
+            ]);
+
+            $nueva = $dia->format('d/m/Y') . ' ' . $hora;
+            Auditoria::registrar('Reprogramar cita', 'Media', 'DOM04', 'CITA', $codCit,
+                "Reprogramación " . ($veces + 1) . " de 2: de {$anterior} a {$nueva}; el anticipo se traslada",
+                codPac: $codPac);
+            $this->notificarPaciente($codPac, 'Cita reprogramada', "Tu cita {$codCit} se movió al {$nueva}.", $codCit);
+
+            return DB::table('CITA')->where('COD_CIT', $codCit)->first();
+        });
+    }
+
+    private function notificarPaciente(string $codPac, string $tipo, string $mensaje, string $ref): void
+    {
+        $codUsr = DB::table('USUARIO')->where('COD_PAC', $codPac)->value('COD_USR');
+        if (!$codUsr) {
+            return;
+        }
+        DB::table('NOTIFICACION')->insert([
+            'COD_NOT' => sprintf('NOT%07d', (int) DB::table('NOTIFICACION')->max('id') + 1),
+            'FEC_NOT' => now(),
+            'TIP_NOT' => $tipo,
+            'MSG_NOT' => mb_substr($mensaje, 0, 255),
+            'CAN_NOT' => 'Sistema',
+            'EST_NOT' => 'Enviada',
+            'REF_NOT' => $ref,
+            'COD_USR' => $codUsr,
+        ]);
+    }
+
     /** Reintento manual del comprobante del anticipo (botón del panel del paciente). */
     public function reintentarComprobante(string $codCit, string $codPac): ?string
     {
