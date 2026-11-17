@@ -1,18 +1,15 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Atender cita - Clínica CIES</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="bg-slate-50 text-slate-800">
-    <header class="bg-gradient-to-r from-emerald-700 to-emerald-500 text-white px-8 py-5 text-xl font-bold">
-        Clínica CIES · Atención médica
-    </header>
+@extends('layouts.admin')
 
-    <main class="max-w-5xl mx-auto p-6 grid gap-6 lg:grid-cols-3">
+@section('titulo', 'Atender cita ' . $cita->COD_CIT)
+@section('encabezado', 'Portal Médico · Atención')
+
+@push('head')
+    @include('medico._tailwind')
+@endpush
+
+@section('contenido')
+<div class="vista-medico">
+    <div class="grid gap-6 lg:grid-cols-3">
         <section class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6">
             <h1 class="text-2xl font-bold text-emerald-800 mb-1">Cita {{ $cita->COD_CIT }}</h1>
             <p class="text-sm text-slate-600 mb-4">
@@ -21,9 +18,6 @@
                 <strong>Motivo:</strong> {{ $cita->MOT_CIT }}
             </p>
 
-            @if ($errors->any())
-                <div class="mb-4 rounded-xl border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm">{{ $errors->first() }}</div>
-            @endif
 
             <form method="POST" action="{{ route('medico.atender.guardar', $cita->COD_CIT) }}" class="space-y-4">
                 @csrf
@@ -131,7 +125,7 @@
             </form>
         </section>
 
-        <aside class="bg-white rounded-2xl border border-slate-200 p-6">
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 self-start">
             <h2 class="font-bold text-red-700 mb-2"><i class="fas fa-allergies"></i> Alergias</h2>
             @forelse ($alergias as $a)
                 <p class="text-sm"><strong>{{ $a->DES_ALE }}</strong> <span class="text-xs text-red-600">({{ $a->SEV_ALE }})</span></p>
@@ -162,7 +156,7 @@
             @else
                 <p class="text-sm text-slate-500">El paciente aún no tiene historia clínica. Se abrirá al guardar esta atención.</p>
             @endif
-        </aside>
-    </main>
-</body>
-</html>
+        </div>
+    </div>
+</div>
+@endsection

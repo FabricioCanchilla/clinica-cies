@@ -12,6 +12,7 @@ import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
 import com.lowagie.text.FontFactory;
+import com.lowagie.text.Image;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
@@ -37,6 +38,22 @@ public final class ComprobantePdf {
     private ComprobantePdf() {
     }
 
+    /** Cabecera con el logo institucional CIES; si no se encuentra el recurso se usa el texto. */
+    private static void cabecera(Document doc) throws Exception {
+        try (var in = ComprobantePdf.class.getResourceAsStream("/logo-cies.png")) {
+            if (in != null) {
+                Image logo = Image.getInstance(in.readAllBytes());
+                logo.scaleToFit(160, 56);
+                logo.setAlignment(Element.ALIGN_LEFT);
+                doc.add(logo);
+                return;
+            }
+        } catch (Exception e) {
+            // sin logo: se usa el nombre en texto
+        }
+        doc.add(new Paragraph("Clínica CIES", TITULO));
+    }
+
     public static String fecha(LocalDate d) {
         return d == null ? "" : d.format(F);
     }
@@ -55,7 +72,7 @@ public final class ComprobantePdf {
             PdfWriter.getInstance(doc, out);
             doc.open();
 
-            doc.add(new Paragraph("Clínica CIES", TITULO));
+            cabecera(doc);
             doc.add(new Paragraph("Comprobante de pago N° " + nro, SUBT));
             if ("Anulado".equals(estado)) {
                 doc.add(new Paragraph("COMPROBANTE ANULADO", ANULADO));
@@ -112,7 +129,7 @@ public final class ComprobantePdf {
             PdfWriter.getInstance(doc, out);
             doc.open();
 
-            doc.add(new Paragraph("Clínica CIES", TITULO));
+            cabecera(doc);
             doc.add(new Paragraph("Comprobante de entrega de insumos N° " + nro, SUBT));
             if ("Anulado".equals(estado)) {
                 doc.add(new Paragraph("COMPROBANTE ANULADO", ANULADO));

@@ -29,7 +29,7 @@
                                 @if ($k->DIFERENCIA === null)
                                     —
                                 @else
-                                    <strong style="color: {{ abs($k->DIFERENCIA) < 0.005 ? '#047857' : '#b91c1c' }};">{{ $bs($k->DIFERENCIA) }}</strong>
+                                    <strong style="color: {{ abs($k->DIFERENCIA) < 0.005 ? '#3b6449' : '#b91c1c' }};">{{ $bs($k->DIFERENCIA) }}</strong>
                                 @endif
                             </td>
                             <td>{{ $k->EST_CAJ }}</td>
