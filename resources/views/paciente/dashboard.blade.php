@@ -92,6 +92,13 @@
             gap: 22px;
         }
 
+        html { scroll-behavior: smooth; }
+
+        a.tarjeta { display: block; text-decoration: none; color: inherit; cursor: pointer; }
+
+        .informacion { scroll-margin-top: 24px; }
+        .informacion:target { outline: 3px solid #10b981; outline-offset: 4px; }
+
         .tarjeta {
             background: white;
             padding: 28px;
@@ -219,54 +226,60 @@
 
         <div class="tarjetas">
 
-            <div class="tarjeta">
+            <a href="#mis-citas" class="tarjeta">
                 <div class="icono">
                     <i class="fas fa-calendar-check"></i>
                 </div>
                 <h3>Mis citas</h3>
-                <p>
-                    Consulta las citas médicas
-                    asociadas a tu cuenta.
-                </p>
-            </div>
+                <p>Consulta, paga, cancela o reprograma tus citas médicas.</p>
+            </a>
 
-            <div class="tarjeta">
+            <a href="#mi-historial" class="tarjeta">
                 <div class="icono">
                     <i class="fas fa-file-medical"></i>
                 </div>
                 <h3>Mi historial médico</h3>
-                <p>
-                    Consulta tu información clínica
-                    y antecedentes médicos.
-                </p>
-            </div>
+                <p>Revisa tus consultas, médicos tratantes y diagnósticos.</p>
+            </a>
 
-            <div class="tarjeta">
+            <a href="#mis-recetas" class="tarjeta">
                 <div class="icono">
                     <i class="fas fa-prescription"></i>
                 </div>
                 <h3>Mis recetas</h3>
-                <p>
-                    Consulta las recetas médicas
-                    registradas a tu nombre.
-                </p>
-            </div>
+                <p>Consulta y descarga en PDF tus recetas médicas.</p>
+            </a>
 
-            <div class="tarjeta">
+            <a href="#mis-resultados" class="tarjeta">
+                <div class="icono">
+                    <i class="fas fa-vials"></i>
+                </div>
+                <h3>Mis resultados</h3>
+                <p>Revisa y descarga tus resultados de laboratorio publicados.</p>
+            </a>
+
+            <a href="#mis-pagos" class="tarjeta">
+                <div class="icono">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <h3>Mis pagos</h3>
+                <p>Historial de anticipos y saldos con sus comprobantes.</p>
+            </a>
+
+            <a href="#mi-perfil" class="tarjeta">
                 <div class="icono">
                     <i class="fas fa-user-circle"></i>
                 </div>
                 <h3>Mi perfil</h3>
-                <p>
-                    Consulta tus datos personales
-                    registrados en la clínica.
-                </p>
-            </div>
+                <p>Consulta y actualiza tus datos de contacto.</p>
+            </a>
+
+        </div>
 
         </div>
 
         
-<section class="informacion" style="margin-top: 30px;">
+<section class="informacion" id="mis-citas" style="margin-top: 30px;">
 
     <h3>
         <i class="fas fa-calendar-check"></i>
@@ -435,7 +448,7 @@
 
 </section>
 
-<section class="informacion" style="margin-top: 30px;">
+<section class="informacion" id="mis-recetas" style="margin-top: 30px;">
 
     <h3>
         <i class="fas fa-prescription"></i>
@@ -543,7 +556,7 @@
 </section>
 
 
-<section class="informacion" style="margin-top: 30px;">
+<section class="informacion" id="mi-historial" style="margin-top: 30px;">
 
     <h3>
         <i class="fas fa-file-medical"></i>
@@ -604,7 +617,7 @@
 
 </section>
 
-<section class="informacion" style="margin-top: 30px;">
+<section class="informacion" id="mis-resultados" style="margin-top: 30px;">
     <h3><i class="fas fa-vials"></i> Mis resultados de laboratorio</h3>
     @if ($resultados->isEmpty())
         <p>No tienes resultados publicados.</p>
@@ -644,7 +657,7 @@
     @endif
 </section>
 
-<section class="informacion" style="margin-top: 30px;">
+<section class="informacion" id="mis-pagos" style="margin-top: 30px;">
     <h3><i class="fas fa-receipt"></i> Mis pagos</h3>
     @if ($pagos->isEmpty())
         <p>No tienes pagos registrados.</p>
@@ -689,7 +702,7 @@
     @endif
 </section>
 
-<section class="informacion" style="margin-top: 30px;">
+<section class="informacion" id="mi-perfil" style="margin-top: 30px;">
     <h3><i class="fas fa-user-circle"></i> Mi perfil</h3>
 
     @if ($paciente)
