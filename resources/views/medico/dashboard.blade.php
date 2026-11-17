@@ -90,6 +90,13 @@
                 <p class="text-slate-500 text-sm mt-1">Gestione sus citas y consultas del mes.</p>
             </div>
 
+            @if (session('ok'))
+                <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-semibold">{{ session('ok') }}</div>
+            @endif
+            @if ($errors->any())
+                <div class="mb-4 rounded-xl border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm font-semibold">{{ $errors->first() }}</div>
+            @endif
+
             <!-- RF021: programación del día -->
             <div class="bg-white rounded-2xl shadow-sm border border-borderlight p-5 mb-6">
                 <h3 class="text-base font-bold text-slate-800 mb-3"><i class="fas fa-calendar-day text-cies mr-1"></i> Citas de hoy ({{ \Carbon\Carbon::today()->format('d/m/Y') }})</h3>
@@ -100,7 +107,7 @@
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="text-left text-xs uppercase tracking-wide text-slate-500 border-b border-borderlight">
-                                    <th class="py-2 pr-3">Hora</th><th class="py-2 pr-3">Paciente</th><th class="py-2 pr-3">Motivo</th><th class="py-2 pr-3">Servicio</th><th class="py-2">Estado</th>
+                                    <th class="py-2 pr-3">Hora</th><th class="py-2 pr-3">Paciente</th><th class="py-2 pr-3">Motivo</th><th class="py-2 pr-3">Servicio</th><th class="py-2 pr-3">Estado</th><th class="py-2"></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -111,6 +118,13 @@
                                         <td class="py-2 pr-3">{{ $c['motivo'] }}</td>
                                         <td class="py-2 pr-3">{{ $c['servicio'] }} · {{ $c['consultorio'] }}</td>
                                         <td class="py-2"><span class="estado-{{ \Illuminate\Support\Str::slug($c['estado']) }} text-[11px] px-2.5 py-1 rounded-full font-bold">{{ $c['estado'] }}</span></td>
+                                        <td class="py-2">
+                                            @if ($c['estado'] === 'Confirmada')
+                                                <a href="{{ route('medico.atender', $c['codigo']) }}" class="bg-cies text-white text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap" style="background:#059669;">
+                                                    <i class="fas fa-stethoscope"></i> Atender
+                                                </a>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>

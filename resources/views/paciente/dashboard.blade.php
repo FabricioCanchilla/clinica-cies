@@ -391,6 +391,31 @@
                                         </button>
                                     </form>
                                 @endif
+
+                                {{-- RF009: cancelar o reprogramar (RN21, RN22) --}}
+                                @if (in_array($cita->EST_CIT, ['Confirmada', 'Pendiente de pago'], true))
+                                    @php
+                                        $horasCita = now()->diffInMinutes(\Carbon\Carbon::parse($cita->FEC_CIT . ' ' . $cita->HOR_CIT), false) / 60;
+                                    @endphp
+                                    <div style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
+                                        @if ($cita->EST_CIT === 'Confirmada' && $horasCita >= 24)
+                                            <a href="{{ route('paciente.citas.reprogramar', $cita->COD_CIT) }}"
+                                               style="background: #e0f2fe; color: #075985; padding: 5px 12px; border-radius: 999px;
+                                                      text-decoration: none; font-size: 13px; font-weight: 600; white-space: nowrap;">
+                                                <i class="fas fa-calendar-alt"></i> Reprogramar
+                                            </a>
+                                        @endif
+                                        <form method="POST" action="{{ route('paciente.citas.cancelar', $cita->COD_CIT) }}" style="display: inline;"
+                                              onsubmit="return confirm('{{ $cita->EST_CIT === 'Confirmada' && $horasCita < 24 ? 'Faltan menos de 24 horas: si cancelas, el anticipo NO se devuelve (RN21). ¿Cancelar de todos modos?' : '¿Seguro que quieres cancelar esta cita?' }}');">
+                                            @csrf
+                                            <button type="submit"
+                                                    style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 5px 12px;
+                                                           border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;">
+                                                <i class="fas fa-times"></i> Cancelar
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endif
                             </td>
 
                             <td style="padding: 12px;">
@@ -530,6 +555,7 @@
                 <thead>
                     <tr style="background: #d1fae5; color: #065f46;">
                         <th style="padding: 12px;">Fecha</th>
+                        <th style="padding: 12px;">Médico tratante</th>
                         <th style="padding: 12px;">Diagnóstico</th>
                         <th style="padding: 12px;">Tratamiento</th>
                     </tr>
@@ -541,7 +567,12 @@
                         <tr style="border-bottom: 1px solid #e2e8f0;">
 
                             <td style="padding: 12px;">
-                                {{ $consulta->FEC_CNS }}
+                                {{ \Carbon\Carbon::parse($consulta->FEC_CNS)->format('d/m/Y H:i') }}
+                            </td>
+
+                            <td style="padding: 12px;">
+                                {{ $consulta->TIT_EMP }} {{ $consulta->NOM_EMP }} {{ $consulta->APE_EMP }}
+                                @if ($consulta->DES_ESP)<br><small style="color:#64748b;">{{ $consulta->DES_ESP }}</small>@endif
                             </td>
 
                             <td style="padding: 12px;">
@@ -565,51 +596,155 @@
 
 </section>
 
-<section class="informacion">
+<section class="informacion" style="margin-top: 30px;">
+    <h3><i class="fas fa-vials"></i> Mis resultados de laboratorio</h3>
+    @if ($resultados->isEmpty())
+        <p>No tienes resultados publicados.</p>
+    @else
+        <div style="overflow-x: auto; margin-top: 20px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #d1fae5; color: #065f46;">
+                        <th style="padding: 12px; text-align: left;">Fecha</th>
+                        <th style="padding: 12px; text-align: left;">Examen</th>
+                        <th style="padding: 12px; text-align: left;">Resultado</th>
+                        <th style="padding: 12px; text-align: left;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($resultados as $r)
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 12px; white-space: nowrap;">{{ \Carbon\Carbon::parse($r->FEC_RES)->format('d/m/Y H:i') }}</td>
+                            <td style="padding: 12px;">{{ $r->NOM_SRV }}<br><small style="color:#64748b;">Orden {{ $r->COD_ORD }}</small></td>
+                            <td style="padding: 12px;">
+                                {{ $r->DES_RES }}
+                                @if ($r->CRI_RES)
+                                    <span style="background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:700; margin-left:6px;">Valor crítico</span>
+                                @endif
+                            </td>
+                            <td style="padding: 12px;">
+                                <button type="button" onclick="imprimirResultado(this)"
+                                        style="background:#eef2ff; color:#3730a3; border:0; padding:5px 12px; border-radius:999px; font-size:13px; font-weight:600; cursor:pointer;">
+                                    <i class="fas fa-download"></i> Descargar
+                                </button>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
+</section>
 
-    <h3>
-        <i class="fas fa-user-circle"></i>
-        Mi perfil
-    </h3>
+<section class="informacion" style="margin-top: 30px;">
+    <h3><i class="fas fa-receipt"></i> Mis pagos</h3>
+    @if ($pagos->isEmpty())
+        <p>No tienes pagos registrados.</p>
+    @else
+        <div style="overflow-x: auto; margin-top: 20px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #d1fae5; color: #065f46;">
+                        <th style="padding: 12px; text-align: left;">Fecha</th>
+                        <th style="padding: 12px; text-align: left;">Cita / servicio</th>
+                        <th style="padding: 12px; text-align: left;">Tipo</th>
+                        <th style="padding: 12px; text-align: right;">Monto (Bs)</th>
+                        <th style="padding: 12px; text-align: left;">Método</th>
+                        <th style="padding: 12px; text-align: left;">Estado</th>
+                        <th style="padding: 12px; text-align: left;">Comprobante</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($pagos as $p)
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 12px; white-space: nowrap;">{{ \Carbon\Carbon::parse($p->FEC_PAG)->format('d/m/Y H:i') }}</td>
+                            <td style="padding: 12px;">{{ $p->COD_CIT }}<br><small style="color:#64748b;">{{ $p->NOM_SRV }}</small></td>
+                            <td style="padding: 12px;">{{ $p->TIP_PAG === 'Adelanto' ? 'Anticipo' : 'Saldo' }}</td>
+                            <td style="padding: 12px; text-align: right;">{{ number_format($p->MON_PAG, 2) }}</td>
+                            <td style="padding: 12px;">{{ $p->DES_MET }}</td>
+                            <td style="padding: 12px;">{{ $p->EST_PAG }}</td>
+                            <td style="padding: 12px;">
+                                @if ($p->TIP_PAG === 'Adelanto' && !$p->COD_CAJ)
+                                    <a href="{{ route('paciente.citas.comprobante', $p->COD_CIT) }}" target="_blank" style="color:#3730a3; font-weight:600;">
+                                        <i class="fas fa-file-pdf"></i> Ver PDF
+                                    </a>
+                                @else
+                                    <small style="color:#64748b;">Emitido en caja</small>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        <p style="font-size: 13px; color: #64748b; margin-top: 10px;">El saldo de cada cita (precio menos anticipo) se paga en caja antes de la atención (RN24).</p>
+    @endif
+</section>
+
+<section class="informacion" style="margin-top: 30px;">
+    <h3><i class="fas fa-user-circle"></i> Mi perfil</h3>
 
     @if ($paciente)
-
         <p>
-            <strong>Nombre:</strong>
-            {{ $paciente->NOM_PAC }}
+            <strong>Código:</strong> {{ $paciente->COD_PAC }} ·
+            <strong>CI:</strong> {{ $paciente->CI_PAC }} ·
+            <strong>Nombre:</strong> {{ $paciente->NOM_PAC }} {{ $paciente->APE_PAC }} ·
+            <strong>Nacimiento:</strong> {{ \Carbon\Carbon::parse($paciente->FECNAC_PAC)->format('d/m/Y') }}
         </p>
+        <p style="font-size: 13px; color: #64748b;">Para corregir tu nombre, CI o fecha de nacimiento acércate a recepción.</p>
 
-        <p>
-            <strong>Apellido:</strong>
-            {{ $paciente->APE_PAC }}
-        </p>
-
-        <p>
-            <strong>CI:</strong>
-            {{ $paciente->CI_PAC }}
-        </p>
-
-        <p>
-            <strong>Teléfono:</strong>
-            {{ $paciente->TEL_PAC ?? 'No registrado' }}
-        </p>
-
-        <p>
-            <strong>Correo:</strong>
-            {{ $paciente->COR_PAC ?? 'No registrado' }}
-        </p>
-
+        <form method="POST" action="{{ route('paciente.perfil.actualizar') }}"
+              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 16px; margin-top: 14px;">
+            @csrf
+            <label style="font-weight:600; font-size:14px;">Teléfono
+                <input type="text" name="telefono" maxlength="8" required value="{{ old('telefono', $paciente->TEL_PAC) }}"
+                       style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-top:4px;">
+            </label>
+            <label style="font-weight:600; font-size:14px;">Correo
+                <input type="email" name="correo" maxlength="60" required value="{{ old('correo', $paciente->COR_PAC) }}"
+                       style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-top:4px;">
+            </label>
+            <label style="font-weight:600; font-size:14px;">Estado civil
+                <select name="estciv" required style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-top:4px;">
+                    @foreach (['Soltero','Casado','Divorciado','Viudo','Concubino'] as $ec)
+                        <option value="{{ $ec }}" @selected(old('estciv', $paciente->ESTCIV_PAC) === $ec)>{{ $ec }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label style="font-weight:600; font-size:14px; grid-column: 1 / -1;">Dirección
+                <input type="text" name="direccion" maxlength="100" required value="{{ old('direccion', $paciente->DIR_PAC) }}"
+                       style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-top:4px;">
+            </label>
+            <div>
+                <button type="submit" style="background:#059669; color:white; border:0; padding:11px 22px; border-radius:10px; font-weight:600; cursor:pointer;">
+                    Guardar cambios
+                </button>
+            </div>
+        </form>
     @else
-
-        <p>
-            Tu cuenta todavía no tiene un paciente
-            asociado. Contacta con administración
-            para verificar tus datos.
-        </p>
-
+        <p>Tu cuenta todavía no tiene un paciente asociado. Contacta con administración para verificar tus datos.</p>
     @endif
-
 </section>
+
+<script>
+    // RF010: descarga del resultado como PDF desde el diálogo de impresión del navegador
+    function imprimirResultado(btn) {
+        const fila = btn.closest('tr').cloneNode(true);
+        fila.lastElementChild.remove();
+        const w = window.open('', '_blank');
+        w.document.write(`<html><head><title>Resultado de laboratorio | Clínica CIES</title>
+            <style>body{font-family:Segoe UI,Arial,sans-serif;padding:30px;color:#0f172a}h2{color:#065f46}
+            td{padding:10px;border:1px solid #cbd5e1;vertical-align:top}</style></head><body>
+            <h2>Clínica CIES · Resultado de laboratorio</h2>
+            <p><strong>Paciente:</strong> {{ $paciente ? $paciente->NOM_PAC . ' ' . $paciente->APE_PAC . ' (' . $paciente->COD_PAC . ')' : '' }}</p>
+            <table style="border-collapse:collapse;width:100%"><tr>${fila.innerHTML}</tr></table>
+            <p style="margin-top:30px;font-size:12px;color:#64748b">Documento generado desde el portal del paciente.</p>
+            </body></html>`);
+        w.document.close();
+        w.focus();
+        w.print();
+    }
+</script>
 
 
     </main>
