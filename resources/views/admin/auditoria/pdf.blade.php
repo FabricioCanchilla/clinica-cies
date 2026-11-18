@@ -6,13 +6,13 @@
     <style>
         @page { margin: 28px 24px 34px 24px; }
         body { font-family: 'DejaVu Sans', sans-serif; font-size: 8px; color: #111827; }
-        h1 { font-size: 15px; margin: 0 0 2px 0; color: #065f46; }
+        h1 { font-size: 15px; margin: 0 0 2px 0; color: #2d4c39; }
         .meta { font-size: 8px; color: #4b5563; margin-bottom: 2px; }
         .filtros { font-size: 8px; margin: 6px 0 8px 0; padding: 4px 6px; background: #f1f5f9; }
         .aviso { font-size: 8px; margin: 0 0 8px 0; padding: 4px 6px; background: #fef3c7; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         thead { display: table-header-group; }
-        th { background: #10b981; color: #ffffff; text-align: left; padding: 3px 4px; border: 1px solid #0f9f73; }
+        th { background: #4c7d5f; color: #ffffff; text-align: left; padding: 3px 4px; border: 1px solid #0f9f73; }
         td { padding: 3px 4px; border: 1px solid #d1d5db; vertical-align: top; word-wrap: break-word; }
         tr:nth-child(even) td { background: #f8fafc; }
         .cri-Alta, .cri-Crítica { color: #b91c1c; font-weight: bold; }
@@ -20,6 +20,7 @@
     </style>
 </head>
 <body>
+    @if (extension_loaded('gd'))<img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('images/logo-cies-pdf.png'))) }}" style="height: 42px; float: right;">@endif
     <h1>Reporte de auditoría — Clínica CIES</h1>
     <div class="meta">Generado por <strong>{{ $generadoPor }}</strong> el {{ $generadoEn }} · {{ $registros->count() }} registro(s)</div>
 

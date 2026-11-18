@@ -218,6 +218,65 @@ class CitaController extends Controller
         ]);
     }
 
+    // ---------- RF009: cancelar y reprogramar (RN21, RN22) ----------
+
+    public function cancelar(string $codCit)
+    {
+        try {
+            $msg = $this->citas->cancelar($codCit, $this->codPac());
+        } catch (DomainException $e) {
+            return redirect()->route('paciente.dashboard')->withErrors(['cita' => $e->getMessage()]);
+        }
+
+        return redirect()->route('paciente.dashboard')->with('ok', $msg);
+    }
+
+    public function reprogramarForm(string $codCit)
+    {
+        $c = \Illuminate\Support\Facades\DB::table('CITA as c')
+            ->join('EMPLEADO as e', 'e.COD_EMP', '=', 'c.COD_EMP')
+            ->join('SERVICIO as s', 's.COD_SRV', '=', 'c.COD_SRV')
+            ->where('c.COD_CIT', $codCit)->where('c.COD_PAC', $this->codPac())
+            ->first(['c.*', 'e.TIT_EMP', 'e.NOM_EMP', 'e.APE_EMP', 's.NOM_SRV']);
+        abort_if(!$c, 404);
+
+        $error = null;
+        if ($c->EST_CIT !== 'Confirmada') {
+            $error = 'Solo se reprograman citas confirmadas.';
+        } elseif ($this->citas->horasParaLaCita($c) < 24) {
+            $error = 'Solo se puede reprogramar hasta 24 horas antes de la cita.';
+        } elseif ($this->citas->reprogramaciones($codCit) >= 2) {
+            $error = 'Esta cita ya se reprogramó 2 veces, que es el máximo permitido.';
+        }
+        if ($error) {
+            return redirect()->route('paciente.dashboard')->withErrors(['cita' => $error]);
+        }
+
+        return view('paciente.citas.reprogramar', [
+            'cita'     => $c,
+            'veces'    => $this->citas->reprogramaciones($codCit),
+            'minFecha' => Carbon::today()->toDateString(),
+            'maxFecha' => Carbon::today()->addDays((int) config('cies.dias_max_anticipacion'))->toDateString(),
+        ]);
+    }
+
+    public function reprogramar(Request $request, string $codCit)
+    {
+        $datos = $request->validate([
+            'fecha' => 'required|date_format:Y-m-d',
+            'hora'  => 'required|date_format:H:i',
+        ]);
+
+        try {
+            $c = $this->citas->reprogramar($codCit, $this->codPac(), $datos['fecha'], $datos['hora']);
+        } catch (DomainException $e) {
+            return back()->withErrors(['cita' => $e->getMessage()])->withInput();
+        }
+
+        return redirect()->route('paciente.dashboard')->with('ok',
+            'Cita reprogramada al ' . Carbon::parse($c->FEC_CIT)->format('d/m/Y') . ' a las ' . substr($c->HOR_CIT, 0, 5) . '. El anticipo pagado se trasladó a la nueva fecha.');
+    }
+
     /** El usuario tiene que ser un paciente con ficha. */
     private function codPac(): string
     {

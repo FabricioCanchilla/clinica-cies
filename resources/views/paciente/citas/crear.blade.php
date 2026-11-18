@@ -1,136 +1,17 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agendar cita | Clínica CIES</title>
+@extends('layouts.admin')
 
-    <style>
-        * { box-sizing: border-box; }
+@section('titulo', 'Agendar cita')
 
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #f0fdf4;
-            color: #1e293b;
-        }
+@section('contenido')
+<h1>Agendar cita médica</h1>
+<p class="sub">Elige la especialidad, el profesional y el horario. El cupo te queda reservado {{ $minutos }} minutos para pagar el anticipo.</p>
 
-        header {
-            padding: 22px 8%;
-            background: linear-gradient(135deg, #047857, #10b981);
-            color: white;
-            font-size: 22px;
-            font-weight: bold;
-        }
+<div class="card formulario ancho">
+    <form method="POST" action="{{ route('paciente.citas.guardar') }}">
+        @csrf
 
-        main {
-            max-width: 900px;
-            margin: 35px auto;
-            padding: 0 20px;
-        }
-
-        .panel {
-            background: white;
-            padding: 30px;
-            border: 1px solid #d1fae5;
-            border-radius: 18px;
-        }
-
-        h1 { color: #065f46; }
-
-        .campo { margin: 20px 0; }
-
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        select, input, textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 15px;
-        }
-
-        textarea { resize: vertical; }
-
-        .aviso {
-            margin-top: 22px;
-            padding: 16px;
-            border-radius: 10px;
-            background: #ecfdf5;
-            color: #065f46;
-        }
-
-        .error {
-            margin-bottom: 22px;
-            padding: 16px;
-            border-radius: 10px;
-            background: #fef2f2;
-            color: #991b1b;
-            border: 1px solid #fecaca;
-        }
-
-        .error ul { margin: 0; padding-left: 20px; }
-
-        .boton {
-            width: 100%;
-            margin-top: 10px;
-            padding: 14px;
-            background: #059669;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .boton:hover { background: #047857; }
-
-        .volver {
-            display: inline-block;
-            margin-top: 22px;
-            color: #047857;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .ayuda {
-            font-size: 13px;
-            color: #64748b;
-            margin-top: 6px;
-        }
-    </style>
-</head>
-<body>
-
-<header>Clínica CIES</header>
-
-<main>
-    <section class="panel">
-
-        <h1>Agendar cita médica</h1>
-
-        <p>Elige al profesional y el horario. El cupo te queda reservado {{ $minutos }} minutos para pagar el anticipo.</p>
-
-        @if ($errors->any())
-            <div class="error">
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <form method="POST" action="{{ route('paciente.citas.guardar') }}">
-            @csrf
-
-            <div class="campo">
+        <div class="fila">
+            <div>
                 <label for="especialidad">Especialidad</label>
                 <select id="especialidad" required>
                     <option value="">Selecciona una especialidad</option>
@@ -139,63 +20,58 @@
                     @endforeach
                 </select>
             </div>
-
-            <div class="campo">
+            <div>
                 <label for="medico">Médico</label>
                 <select name="medico" id="medico" required disabled>
                     <option value="">Primero elige la especialidad</option>
                 </select>
             </div>
+        </div>
 
-            <div class="campo">
+        <div class="fila">
+            <div>
                 <label for="fecha">Fecha</label>
-                <input type="date" name="fecha" id="fecha"
-                       min="{{ $minFecha }}" max="{{ $maxFecha }}"
-                       value="{{ old('fecha') }}" required>
+                <input type="date" name="fecha" id="fecha" min="{{ $minFecha }}" max="{{ $maxFecha }}" value="{{ old('fecha') }}" required>
             </div>
-
-            <div class="campo">
+            <div>
                 <label for="hora">Horario disponible</label>
                 <select name="hora" id="hora" required disabled>
                     <option value="">Elige médico y fecha</option>
                 </select>
                 <p class="ayuda">Cada consulta dura 30 minutos.</p>
             </div>
+        </div>
 
-            <div class="campo">
-                <label for="servicio">Servicio</label>
-                <select name="servicio" id="servicio" required>
-                    <option value="">Selecciona el servicio</option>
-                    @foreach ($servicios as $srv)
-                        <option value="{{ $srv->COD_SRV }}" {{ old('servicio') === $srv->COD_SRV ? 'selected' : '' }}>
-                            {{ $srv->NOM_SRV }} - Bs {{ $srv->PRE_SRV }} (anticipo Bs {{ $srv->ANTICIPO }})
-                        </option>
-                    @endforeach
-                </select>
-                <p class="ayuda">Para confirmar la cita se paga un anticipo del {{ $porcentaje }} % del servicio.</p>
-            </div>
+        <label for="servicio">Servicio</label>
+        <select name="servicio" id="servicio" required>
+            <option value="">Selecciona el servicio</option>
+            @foreach ($servicios as $srv)
+                <option value="{{ $srv->COD_SRV }}" {{ old('servicio') === $srv->COD_SRV ? 'selected' : '' }}>
+                    {{ $srv->NOM_SRV }} - Bs {{ $srv->PRE_SRV }} (anticipo Bs {{ $srv->ANTICIPO }})
+                </option>
+            @endforeach
+        </select>
+        <p class="ayuda">Para confirmar la cita se paga un anticipo del {{ $porcentaje }} % del servicio.</p>
 
-            <div class="campo">
-                <label for="motivo">Motivo de la consulta</label>
-                <textarea name="motivo" id="motivo" rows="3" maxlength="200" required>{{ old('motivo') }}</textarea>
-                <p class="ayuda">Máximo 200 caracteres.</p>
-            </div>
+        <label for="motivo">Motivo de la consulta</label>
+        <textarea name="motivo" id="motivo" rows="3" maxlength="200" required>{{ old('motivo') }}</textarea>
+        <p class="ayuda">Máximo 200 caracteres.</p>
 
-            <button type="submit" class="boton">Reservar y pagar el anticipo</button>
-        </form>
-
-        <div class="aviso">
+        <div class="alerta info">
+            <i class="fas fa-clock"></i>
             Al reservar, el horario queda bloqueado {{ $minutos }} minutos. Si no pagas el anticipo
             dentro de ese tiempo, el cupo se libera automáticamente.
         </div>
 
-        <a class="volver" href="{{ route('paciente.dashboard') }}">
-            Volver a mi panel
-        </a>
+        <div class="acciones">
+            <button type="submit" class="btn principal"><i class="fas fa-calendar-plus"></i> Reservar y pagar el anticipo</button>
+            <a class="btn" href="{{ route('paciente.dashboard') }}#mis-citas"><i class="fas fa-arrow-left"></i> Volver a mis citas</a>
+        </div>
+    </form>
+</div>
+@endsection
 
-    </section>
-</main>
-
+@push('scripts')
 <script>
     const MEDICOS = @json($medicos);
 
@@ -264,6 +140,4 @@
     selMedico.addEventListener('change', cargarHorarios);
     inpFecha.addEventListener('change', cargarHorarios);
 </script>
-
-</body>
-</html>
+@endpush

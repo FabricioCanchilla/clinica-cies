@@ -34,7 +34,7 @@ public class OtpService {
 
     private static final Logger LOG = Logger.getLogger(OtpService.class);
     private static final ZoneId LA_PAZ = ZoneId.of("America/La_Paz");
-    private static final Set<String> PROPOSITOS = Set.of("PAGO_CITA", "ENTREGA_INSUMOS");
+    private static final Set<String> PROPOSITOS = Set.of("PAGO_CITA", "ENTREGA_INSUMOS", "INICIO_SESION");
     private static final Set<String> CANALES = Set.of("CORREO", "SMS");
 
     private final SecureRandom random = new SecureRandom();
@@ -70,7 +70,7 @@ public class OtpService {
             throw new OtpException(400, "codUsr invalido");
         }
         if (!PROPOSITOS.contains(proposito)) {
-            throw new OtpException(400, "proposito invalido (PAGO_CITA o ENTREGA_INSUMOS)");
+            throw new OtpException(400, "proposito invalido (PAGO_CITA, ENTREGA_INSUMOS o INICIO_SESION)");
         }
         if (!CANALES.contains(canal)) {
             throw new OtpException(400, "canal invalido (CORREO o SMS)");

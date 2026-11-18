@@ -23,6 +23,13 @@ Route::get('/', fn () => redirect()->route('panel'));
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login'])->name('login.post');
+
+    // RN05: segundo factor OTP para Administrador, Caja y Auditor
+    Route::get('/login/verificar', [LoginController::class, 'form2fa'])->name('login.2fa');
+    Route::post('/login/verificar', [LoginController::class, 'verificar2fa'])
+        ->middleware('throttle:10,1')->name('login.2fa.verificar');
+    Route::post('/login/reenviar', [LoginController::class, 'reenviar2fa'])
+        ->middleware('throttle:3,1')->name('login.2fa.reenviar');
     
     // RF005 / RN04: recuperación con enlace firmado de 30 min y un solo uso
     Route::get('/recuperar-contrasena', [RecuperacionController::class, 'form'])->name('password.request');
@@ -108,21 +115,18 @@ Route::middleware('auth')->group(function () {
         Route::get('/pacientes', [PacienteController::class, 'index'])
     ->name('pacientes');
 
-$secciones = [
-    'citas'       => 'Citas',
-    'caja'        => 'Caja',
-    'internacion' => 'Internación',
-];
-
-foreach ($secciones as $slug => $titulo) {
-    Route::get("/$slug", fn () => view('admin.pendiente', ['titulo' => $titulo]))
-        ->name($slug);
-}
+        // Supervisión (solo lectura): citas, caja e internación
+        Route::get('/citas', [\App\Http\Controllers\Admin\SupervisionController::class, 'citas'])->name('citas');
+        Route::get('/caja', [\App\Http\Controllers\Admin\SupervisionController::class, 'caja'])->name('caja');
+        Route::get('/internacion', [\App\Http\Controllers\Admin\SupervisionController::class, 'internacion'])->name('internacion');
 }); // Cierre del grupo administrativo
 
     // 3. Panel de Médico
     Route::middleware('rol:ROL003')->prefix('medico')->name('medico.')->group(function () {
         Route::get('/', [MedicoDashboardController::class, 'index'])->name('dashboard');
+        // RF020: atender la cita (consulta + nota de evolución) y pasarla a Atendida
+        Route::get('/citas/{codCit}/atender', [\App\Http\Controllers\Medico\AtencionController::class, 'form'])->name('atender');
+        Route::post('/citas/{codCit}/atender', [\App\Http\Controllers\Medico\AtencionController::class, 'guardar'])->name('atender.guardar');
     });
     // Panel de Laboratorio (ROL007)
     Route::middleware('rol:ROL007')->prefix('laboratorio')->name('laboratorio.')->group(function () {
@@ -165,6 +169,17 @@ foreach ($secciones as $slug => $titulo) {
         Route::get('/citas/{codCit}/comprobante', [PacienteCitaController::class, 'comprobantePdf'])->name('citas.comprobante');
         // RF016: comprobantes de los insumos que entregaron sus familiares
         Route::get('/insumos/{nroCen}/comprobante', [PacienteCitaController::class, 'comprobanteInsumoPdf'])->name('insumos.comprobante');
+
+        // RF009: cancelación y reprogramación (RN21, RN22)
+        Route::post('/citas/{codCit}/cancelar', [PacienteCitaController::class, 'cancelar'])->name('citas.cancelar');
+        Route::get('/citas/{codCit}/reprogramar', [PacienteCitaController::class, 'reprogramarForm'])->name('citas.reprogramar');
+        Route::post('/citas/{codCit}/reprogramar', [PacienteCitaController::class, 'reprogramar'])->name('citas.reprogramar.guardar');
+
+        // RF011: receta en PDF
+        Route::get('/recetas/{codRec}/pdf', [PacienteDashboardController::class, 'recetaPdf'])->name('recetas.pdf');
+
+        // RF014: mi perfil
+        Route::post('/perfil', [PacienteDashboardController::class, 'actualizarPerfil'])->name('perfil.actualizar');
     });
 
     // Panel de Enfermería (ROL004): RF031 recepción de insumos y RF032 firma + OTP + comprobante (RN36)
@@ -192,16 +207,23 @@ foreach ($secciones as $slug => $titulo) {
         Route::get('/comprobantes/{nroCom}/pdf', [CajaController::class, 'pdf'])->name('pdf');
     });
 
-    // 4. Panel de los demás roles
-    $otros = [
-        'ROL002' => 'recepcion',
-    ];
-
-    foreach ($otros as $codigo => $slug) {
-        Route::middleware("rol:$codigo")->group(function () use ($slug) {
-            Route::get("/$slug", fn () => view('pendiente'))->name("$slug.dashboard");
-        });
-    }
+    // Panel de Recepción (ROL002): RF036 pacientes, RF037 check-in y disponibilidad, RF038 seguros y agendas
+    Route::middleware('rol:ROL002')->prefix('recepcion')->name('recepcion.')->group(function () {
+        $rc = \App\Http\Controllers\Recepcion\RecepcionController::class;
+        Route::get('/', [$rc, 'index'])->name('dashboard');
+        Route::get('/pacientes', [$rc, 'pacientes'])->name('pacientes');
+        Route::get('/pacientes/crear', [$rc, 'crearPaciente'])->name('pacientes.crear');
+        Route::post('/pacientes', [$rc, 'guardarPaciente'])->name('pacientes.guardar');
+        Route::get('/pacientes/{codPac}', [$rc, 'paciente'])->name('paciente');
+        Route::post('/pacientes/{codPac}/seguros', [$rc, 'guardarSeguro'])->name('seguros.guardar');
+        Route::post('/seguros/{codSeg}/revalidar', [$rc, 'revalidarSeguro'])->name('seguros.revalidar');
+        Route::post('/citas/{codCit}/checkin', [$rc, 'checkin'])->name('checkin');
+        Route::post('/citas/{codCit}/inasistencia', [$rc, 'inasistencia'])->name('inasistencia');
+        Route::post('/citas/{codCit}/cancelar', [$rc, 'cancelarCita'])->name('cancelar');
+        Route::get('/citas/{codCit}/reprogramar', [$rc, 'reprogramarForm'])->name('reprogramar');
+        Route::post('/citas/{codCit}/reprogramar', [$rc, 'reprogramar'])->name('reprogramar.guardar');
+        Route::get('/horarios', [$rc, 'horarios'])->name('horarios');
+    });
         // Auditoría: la ven el administrador y el auditor
     Route::middleware('rol:ROL001,ROL009')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/auditoria', [AuditoriaController::class, 'index'])->name('auditoria');
