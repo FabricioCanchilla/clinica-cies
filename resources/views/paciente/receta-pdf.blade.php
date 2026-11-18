@@ -16,7 +16,7 @@
 </head>
 <body>
     <table class="cab"><tr>
-        <td style="width: 45%;"><img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('images/logo-cies-pdf.png'))) }}" style="height: 48px;"></td>
+        <td style="width: 45%;">@if (extension_loaded('gd'))<img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('images/logo-cies-pdf.png'))) }}" style="height: 48px;">@endif</td>
         <td style="text-align: right;"><h1>Receta médica</h1></td>
     </tr></table>
     <p class="sub">{{ $r->COD_REC }} · {{ \Carbon\Carbon::parse($r->FEC_REC)->format('d/m/Y') }} · Estado: {{ $r->EST_REC }}</p>

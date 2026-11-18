@@ -20,7 +20,7 @@
     </style>
 </head>
 <body>
-    <img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('images/logo-cies-pdf.png'))) }}" style="height: 42px; float: right;">
+    @if (extension_loaded('gd'))<img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('images/logo-cies-pdf.png'))) }}" style="height: 42px; float: right;">@endif
     <h1>Reporte de auditoría — Clínica CIES</h1>
     <div class="meta">Generado por <strong>{{ $generadoPor }}</strong> el {{ $generadoEn }} · {{ $registros->count() }} registro(s)</div>
 
