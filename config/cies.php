@@ -11,4 +11,7 @@ return [
     'descuento_sin_autorizacion' => 20,
     // Método que cuenta como efectivo para el arqueo del cierre de caja
     'metodo_efectivo'            => 'MET0001',
+
+    // AJ08: minutos mínimos de acción del desinfectante y ventilación en la desinfección terminal de una cama
+    'limpieza_terminal_min'      => (int) env('CIES_LIMPIEZA_TERMINAL_MIN', 45),
 ];

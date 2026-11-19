@@ -82,23 +82,8 @@ Route::middleware('auth')->group(function () {
     // 2. Panel de Administrador
     Route::middleware('rol:ROL001')->prefix('admin')->name('admin.')->group(function () {
         
-        Route::get('/', function () {
-            $totales = [
-                'Usuarios'  => DB::table('usuario')->count(),
-                'Empleados' => DB::table('empleado')->count(),
-                'Pacientes' => DB::table('paciente')->count(),
-                'Citas'     => DB::table('cita')->count(),
-            ];
-
-            $ultimos = DB::table('usuario')
-                ->join('rol', 'usuario.COD_ROL', '=', 'rol.COD_ROL')
-                ->select('usuario.USR_USR', 'usuario.EST_USR', 'usuario.FECULT_USR', 'rol.DES_ROL')
-                ->orderByDesc('usuario.id')
-                ->limit(5)
-                ->get();
-
-            return view('admin.dashboard', compact('totales', 'ultimos'));
-        })->name('dashboard');
+        // Dashboard con indicadores y gráficos de uso de la clínica
+        Route::get('/', [\App\Http\Controllers\Admin\ReporteController::class, 'dashboard'])->name('dashboard');
 
         Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios');
         Route::get('/usuarios/crear', [UsuarioController::class, 'create'])->name('usuarios.crear');
@@ -119,6 +104,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/citas', [\App\Http\Controllers\Admin\SupervisionController::class, 'citas'])->name('citas');
         Route::get('/caja', [\App\Http\Controllers\Admin\SupervisionController::class, 'caja'])->name('caja');
         Route::get('/internacion', [\App\Http\Controllers\Admin\SupervisionController::class, 'internacion'])->name('internacion');
+
+        // RF050: planificación de la capacidad de camas
+        Route::get('/planificacion-camas', [\App\Http\Controllers\Admin\RecomendadorCamasController::class, 'index'])->name('recomendador');
+        Route::post('/planificacion-camas/decision', [\App\Http\Controllers\Admin\RecomendadorCamasController::class, 'decidir'])->name('recomendador.decidir');
+
+        // Reportes de atención con gráficos (por día, semana, mes, año, especialidad y médico)
+        Route::get('/reportes', [\App\Http\Controllers\Admin\ReporteController::class, 'index'])->name('reportes');
+        Route::get('/reportes/excel', [\App\Http\Controllers\Admin\ReporteController::class, 'excel'])->name('reportes.excel');
 }); // Cierre del grupo administrativo
 
     // 3. Panel de Médico
@@ -127,6 +120,8 @@ Route::middleware('auth')->group(function () {
         // RF020: atender la cita (consulta + nota de evolución) y pasarla a Atendida
         Route::get('/citas/{codCit}/atender', [\App\Http\Controllers\Medico\AtencionController::class, 'form'])->name('atender');
         Route::post('/citas/{codCit}/atender', [\App\Http\Controllers\Medico\AtencionController::class, 'guardar'])->name('atender.guardar');
+        // Estadísticas del médico: sus pacientes y la especialidad más frecuentada por mes
+        Route::get('/estadisticas', [\App\Http\Controllers\Medico\EstadisticaController::class, 'index'])->name('estadisticas');
     });
     // Panel de Laboratorio (ROL007)
     Route::middleware('rol:ROL007')->prefix('laboratorio')->name('laboratorio.')->group(function () {
@@ -180,6 +175,10 @@ Route::middleware('auth')->group(function () {
 
         // RF014: mi perfil
         Route::post('/perfil', [PacienteDashboardController::class, 'actualizarPerfil'])->name('perfil.actualizar');
+
+        // Mi reporte de atención (todo lo que hice en la clínica)
+        Route::get('/mi-reporte', [\App\Http\Controllers\Comun\ReportePacienteController::class, 'mio'])->name('reporte');
+        Route::get('/mi-reporte/pdf', [\App\Http\Controllers\Comun\ReportePacienteController::class, 'mioPdf'])->name('reporte.pdf');
     });
 
     // Panel de Enfermería (ROL004): RF031 recepción de insumos y RF032 firma + OTP + comprobante (RN36)
@@ -193,6 +192,16 @@ Route::middleware('auth')->group(function () {
         Route::post('/insumos/{codIns}/comprobante', [InsumoController::class, 'reintentar'])->name('insumos.comprobante');
         Route::get('/insumos/{codIns}/firma', [InsumoController::class, 'firma'])->name('insumos.firma');
         Route::get('/comprobantes/{nroCen}/pdf', [InsumoController::class, 'pdf'])->name('insumos.pdf');
+
+        // Camas: internar, alta, aislamiento y limpieza (AJ07, AJ08)
+        $cc = \App\Http\Controllers\Enfermeria\CamaController::class;
+        Route::get('/camas', [$cc, 'index'])->name('camas');
+        Route::post('/camas/{codCam}/internar', [$cc, 'internar'])->name('camas.internar');
+        Route::post('/camas/{codCam}/reportar', [$cc, 'reportar'])->name('camas.reportar');
+        Route::post('/internaciones/{codInt}/aislamiento', [$cc, 'aislamiento'])->name('internaciones.aislamiento');
+        Route::post('/internaciones/{codInt}/alta', [$cc, 'alta'])->name('internaciones.alta');
+        Route::post('/limpiezas/{codLim}/iniciar', [$cc, 'iniciar'])->name('limpiezas.iniciar');
+        Route::post('/limpiezas/{codLim}/completar', [$cc, 'completar'])->name('limpiezas.completar');
     });
 
     // Panel de Caja (ROL005), RF039: apertura, cobros, anulación y cierre
@@ -237,4 +246,18 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/admin/auditoria/pdf', [\App\Http\Controllers\Admin\AuditoriaController::class, 'pdf'])
     ->name('admin.auditoria.pdf')->middleware('rol:ROL001,ROL009');
+
+    // Reporte del paciente: administración, recepción y médico (solo sus pacientes)
+    Route::middleware('rol:ROL001,ROL002,ROL003')->prefix('reportes')->name('reportes.')->group(function () {
+        $rp = \App\Http\Controllers\Comun\ReportePacienteController::class;
+        Route::get('/pacientes', [$rp, 'buscar'])->name('pacientes');
+        Route::get('/pacientes/{codPac}', [$rp, 'show'])->name('paciente');
+        Route::get('/pacientes/{codPac}/pdf', [$rp, 'pdf'])->name('paciente.pdf');
+    });
+
+    // Orden de pago de una cita: la emiten recepción y administración; caja y el paciente la consultan
+    Route::middleware('rol:ROL001,ROL002,ROL005,ROL006')->prefix('ordenes-pago')->name('ordenes.')->group(function () {
+        Route::get('/{codCit}', [\App\Http\Controllers\Comun\OrdenPagoController::class, 'show'])->name('pago');
+        Route::get('/{codCit}/pdf', [\App\Http\Controllers\Comun\OrdenPagoController::class, 'pdf'])->name('pago.pdf');
+    });
 });

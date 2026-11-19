@@ -30,8 +30,7 @@ class PacienteController extends Controller
                       ->orWhere('COD_PAC', 'like', "%{$buscar}%");
                 });
             })
-            ->orderBy('APE_PAC')
-            ->orderBy('NOM_PAC')
+            ->orderBy('COD_PAC')
             ->simplePaginate(15)
             ->withQueryString();
 

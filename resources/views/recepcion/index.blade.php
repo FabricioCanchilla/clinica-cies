@@ -38,6 +38,7 @@
                                 @endif
                             </td>
                             <td style="white-space: nowrap;">
+                                <a href="{{ route('ordenes.pago', $c->COD_CIT) }}" class="btn sm" title="Orden de pago"><i class="fas fa-file-invoice-dollar"></i> OP</a>
                                 @if ($c->EST_CIT === 'Confirmada' && !$c->CHECKIN)
                                     @if (!$c->FUERA_TOLERANCIA)
                                         <form method="POST" action="{{ route('recepcion.checkin', $c->COD_CIT) }}" style="display:inline;">

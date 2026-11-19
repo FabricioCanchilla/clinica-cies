@@ -1,9 +1,12 @@
 # Clínica CIES
 
-Sistema de gestión administrativa para la Clínica CIES (La Paz, Bolivia).
-Proyecto de Programación 3, UNIFRANZ.
+Sistema web para la Clínica CIES La Paz (Av. Tejada Sorzano #393, Miraflores, La Paz, Bolivia):
+citas con anticipo en línea, atención médica, laboratorio, farmacia, enfermería e internación,
+caja, auditoría, reportes con gráficos y planificación de la capacidad de camas.
 
-**Stack:** Laravel 13 · PHP 8.4 · MySQL 8.4 · Docker.
+Proyecto de Programación 3 e Investigación Operativa II, UNIFRANZ.
+
+**Stack:** Laravel 13 · PHP 8.4 · MySQL 8.4 · Quarkus 3.15 (Java 21: OTP y comprobantes PDF) · Mailpit · Docker.
 
 ## Integrantes del grupo
 
@@ -14,261 +17,211 @@ Proyecto de Programación 3, UNIFRANZ.
 | Quispe Mamani Rosmery | Desarrollo backend y vistas, módulo de pacientes | [rosmeryqm2020-afk](https://github.com/rosmeryqm2020-afk) |
 | Copa Pérez Neyda Milena | Documentación, pruebas y módulo de caja | [Milenacopa120-0409](https://github.com/Milenacopa120-0409) |
 
-## Requisitos
+---
 
-- **Opción A (Docker):** solo Docker Desktop (abierto y corriendo) y Git. No hace falta instalar PHP, Composer, XAMPP ni MySQL.
-- **Opción B (PHP local, para desarrollar):** Docker Desktop, Git, PHP 8.4 o superior y Composer.
+## 1. Correr el sistema (5 pasos)
 
-## Levantar el sistema
-
-### Opción A: todo en Docker (recomendada)
+**Requisitos:** Docker Desktop abierto y Git. No hace falta instalar PHP, Java, Composer ni MySQL.
 
 ```bash
 git clone https://github.com/FabricioCanchilla/clinica-cies.git
 cd clinica-cies
-docker compose up --build
+docker compose up --build -d
+docker compose logs -f app        # espera el mensaje «Listo» (Ctrl+C para salir del log)
 ```
 
-La primera vez tarda unos minutos: descarga las imágenes, instala las dependencias,
-crea las 48 tablas, el usuario `cies_app` y carga los datos de prueba. Cuando aparezca
-el mensaje `Listo`, abre el sistema en el navegador.
+Abre **http://localhost:8001** y entra con `admin` / `admin123`.
 
-Para dejarlo corriendo en segundo plano: `docker compose up -d --build`
-y ver el avance con `docker compose logs -f app`.
+La primera vez tarda varios minutos: descarga las imágenes, compila Quarkus, instala las
+dependencias, crea la base de datos y carga **un año de datos de demostración** (médicos,
+pacientes, citas, consultas, pagos e internaciones). No cierres Docker hasta ver `Listo`.
 
-### Opción B: PHP local
+> **Código de verificación (OTP).** El administrador, la caja y el auditor ingresan con un
+> segundo factor, y el anticipo de las citas se confirma con OTP. Los correos no salen a
+> Internet: llegan a **Mailpit**, en http://localhost:8025. Abre ahí el último correo y copia el código.
 
-Solo la base de datos va en Docker; la app corre con tu PHP.
+### Direcciones
+
+| Servicio | Dirección | Acceso |
+|----------|-----------|--------|
+| Sistema | http://localhost:8001 | usuarios de la tabla de abajo |
+| Correo de pruebas (Mailpit) | http://localhost:8025 | códigos OTP, recuperación de contraseña |
+| phpMyAdmin | http://localhost:8081 | root / root123 |
+| MySQL | 127.0.0.1:3307 | root / root123 (la app usa `cies_app`) |
+| Quarkus (OTP y comprobantes) | http://localhost:8082 | lo usa Laravel internamente |
+
+### Opción B: PHP local (para desarrollar)
+
+Todo lo demás sigue en Docker; solo la app corre con tu PHP 8.4 y Composer.
 
 ```powershell
-docker compose up -d mysql
+docker compose up -d mysql quarkus mailpit phpmyadmin
 composer install
 copy .env.example .env      # solo la primera vez
 php artisan key:generate    # solo la primera vez
 php artisan db:seed         # solo si la BD está vacía
-php artisan serve
+php artisan serve           # http://localhost:8000
 ```
 
-Se abre en http://localhost:8000.
+---
 
-### Direcciones
+## 2. Usuarios de prueba
 
-| Servicio    | Dirección                                                              |
-|-------------|------------------------------------------------------------------------|
-| Sistema     | http://localhost:8001 (Opción A) · http://localhost:8000 (Opción B)    |
-| phpMyAdmin  | http://localhost:8081 (root / root123)                                 |
-| MySQL       | 127.0.0.1:3307 (root / root123)                                        |
+La contraseña es siempre **usuario + `123`**.
 
-La app se conecta con el usuario `cies_app`, que solo puede hacer `SELECT` e `INSERT` sobre
-`AUDITORIA` (los eventos son inmutables). Para tareas de administración de la BD usa `root`.
-El usuario se crea con `database/sql/02_usuario_auditoria.sql`, que solo se ejecuta cuando
-se crea el volumen de MySQL. Si agregas una tabla nueva a `01_estructura.sql`, recrea la BD
-con `docker compose down -v` para que reciba sus permisos.
+| Usuario | Rol | Qué ver |
+|---------|-----|---------|
+| `admin` | Administrador (con OTP) | Dashboard con gráficos, reportes, usuarios, empleados, planificación de camas, auditoría |
+| `recepcion` | Recepción | Citas del día, check-in, pacientes, seguros, órdenes de pago |
+| `medico` | Médico (Medicina General) | Agenda, atención, recetas, órdenes de examen, estadísticas |
+| `enfermeria` | Enfermería | Camas e internación con control de limpieza, insumos de familiares |
+| `caja` | Caja (con OTP) | Apertura, cobros por orden de pago, anulaciones, cierre |
+| `paciente` | Paciente | Agendar y pagar citas, historial, recetas, resultados, mi reporte |
+| `laboratorio` | Laboratorio | Órdenes de examen y resultados |
+| `farmacia` | Farmacia | Despacho de recetas y stock por lote (PEPS) |
+| `auditor` | Auditor (con OTP) | Auditoría con exportación a Excel y PDF |
 
-## Comandos útiles
+**Médicos** (14 especialidades, 17 médicos, cada uno con su horario y consultorio):
+
+| Especialidad | Usuarios |
+|--------------|----------|
+| Medicina General | `medico`, `pcondori` |
+| Ginecología y Obstetricia | `amamani`, `jvargas` |
+| Pediatría | `crojas`, `mgutierrez` |
+| Psicología | `dsalazar` |
+| Odontología | `rparedes` |
+| Urología | `faliaga` |
+| Medicina Interna | `mrios` |
+| Traumatología | `scalle` |
+| Cardiología | `garce` |
+| Dermatología | `lapaza` |
+| Otorrinolaringología | `asinani` |
+| Endocrinología | `vmercado` |
+| Gastroenterología | `rtapia` |
+| Cirugía General | `hblanco` |
+
+Los pacientes de demostración entran con su **CI** como usuario y la clave `Cies` + CI
+(por ejemplo `4810235` / `Cies4810235`); el sistema les pide cambiarla al primer ingreso.
+
+Cada rol entra solo a su panel; si abre el de otro rol, el sistema responde 403.
+
+---
+
+## 3. Qué hace el sistema
+
+| Módulo | Funciones principales |
+|--------|-----------------------|
+| **Público** | Presentación de la clínica, especialidades, mapa y contacto, botón de emergencia, registro de pacientes |
+| **Paciente** | Agendar cita (el horario queda reservado 15 min), pagar el anticipo con firma y OTP, cancelar y reprogramar, historial, recetas en PDF, resultados, pagos y comprobantes, orden de pago, **mi reporte** |
+| **Recepción** | Citas del día y check-in (tolerancia de 15 min), alta presencial de pacientes, validación de seguros, disponibilidad de médicos, consultorios y camas, órdenes de pago |
+| **Médico** | Agenda real, atención con consulta y nota de evolución, receta con alerta de alergias, órdenes de examen, **estadísticas** de sus pacientes y reporte de cada paciente |
+| **Laboratorio** | Flujo de la orden, carga, validación y publicación de resultados, alerta de valor crítico |
+| **Farmacia** | Despacho de recetas ítem por ítem, stock por lote con PEPS, bajas y alertas de vencimiento |
+| **Enfermería** | Insumos que traen los familiares (firma + OTP + comprobante); **camas e internación con control de limpieza y aislamiento** |
+| **Caja** | Apertura y cierre con arqueo, cobro del saldo por **orden de pago**, descuentos con autorización, anulaciones, comprobantes PDF |
+| **Administración** | Dashboard con gráficos, **reportes de atención**, reporte por paciente, usuarios, empleados, supervisión de citas, caja e internación |
+| **Auditoría** | Registro inmutable por dominio y criticidad, filtros, exportación a Excel y PDF, alertas críticas |
+| **Planificación de camas (IO II)** | Recomendador de capacidad de camas a partir del historial de ocupación (ver sección 5) |
+
+### Reportes y gráficos
+- **Dashboard del administrador:** atenciones del mes frente al mes anterior, pacientes atendidos y nuevos, ingresos,
+  asistencia, especialidad más frecuentada, ocupación de camas; gráficos de los últimos 30 días, pacientes que más
+  visitan la clínica, atenciones por especialidad, especialidad más frecuentada cada mes, pacientes por médico,
+  estado de las citas, ingresos de 12 meses, perfil por sexo y edad, y camas.
+- **Reportes de atención** (`/admin/reportes`): todo filtrable por **día, semana, mes, año o rango**, por especialidad
+  y por médico. Exporta a Excel (queda auditado) e imprime en PDF.
+- **Reporte por paciente:** citas, diagnósticos, recetas, exámenes, pagos, internaciones e insumos, con PDF.
+  Lo ven el administrador y recepción; el médico solo el de sus pacientes; el paciente, el suyo.
+- **Mis estadísticas del médico:** sus atenciones, pacientes frecuentes, diagnósticos y la demanda por especialidad.
+
+### Camas: reglas de bioseguridad
+- Solo se interna en una cama **Disponible** y sin limpieza pendiente.
+- Al dar de alta, la cama pasa a **Limpieza** y no se puede usar hasta completar su lista de verificación
+  (sábanas, superficies, colchón).
+- Si el paciente tenía **aislamiento** (COVID-19, tuberculosis, etc.), la limpieza es **terminal**: además exige
+  ventilación y un tiempo mínimo de acción del desinfectante (45 min, `CIES_LIMPIEZA_TERMINAL_MIN`).
+- Ropa sucia en una cama libre la saca de servicio; en una cama ocupada genera una tarea de cambio.
+
+### Orden de pago
+Número `OP-<código de cita>` con el servicio, el anticipo ya pagado y el saldo. La emiten recepción y
+administración, el paciente la ve en sus citas y la caja la busca escribiendo ese número.
+
+---
+
+## 4. Base de datos
+
+No usamos migraciones. MySQL ejecuta solo, la primera vez que se crea el volumen, los scripts de `database/sql/`:
+
+| Script | Contenido |
+|--------|-----------|
+| `01_estructura.sql` | Las 48 tablas del diccionario de datos |
+| `02_usuario_auditoria.sql` | Usuario `cies_app`: no puede modificar ni borrar `AUDITORIA` |
+| `03_usuario_quarkus.sql` | Usuario del microservicio Quarkus |
+| `04_ajustes_defensa.sql` | AJ07 aislamiento en `INTERNACION` y AJ08 tabla `LIMPIEZA_CAMA` |
+
+Los datos se cargan con `php artisan db:seed` (lo hace solo el contenedor si la BD está vacía):
+
+| Seeder | Datos |
+|--------|-------|
+| `DatosInicialesSeeder` | Roles, administrador, dominios de auditoría, métodos de pago, servicios |
+| `UsuariosPruebaSeeder` | Un usuario por rol y la paciente de prueba |
+| `DatosClinicosPruebaSeeder` | Órdenes de examen, receta y lotes de medicamentos |
+| `HistorialInternacionSeeder` | Sala de 10 camas y 3 años de internaciones (planificación de camas) |
+| `DemostracionClinicaSeeder` | 14 especialidades, 10 consultorios, 17 médicos con horario, pacientes adultos y niños, un año de citas con consultas y pagos, estados de cama de ejemplo |
+
+**Cada vez que cambie algo en `database/sql/` o en los seeders, recrea la base:**
 
 ```bash
-docker compose up -d          # encender
-docker compose down           # apagar (conserva los datos)
-docker compose down -v        # apagar y BORRAR la base de datos y las dependencias
-docker compose logs -f app    # ver logs de la aplicación
-docker exec -it clinica_cies_app php artisan <comando>   # artisan dentro del contenedor
-docker exec -it clinica_cies_db mysql -uroot -p clinica_cies -e "SELECT * FROM USUARIO;"
+docker compose down -v
+docker compose up --build -d
 ```
 
-**Después de cada `git pull`:** si trae cambios en `composer.json` o `composer.lock`
-(por ejemplo, las librerías de exportación de auditoría), instala las dependencias en el mismo
-entorno donde corre la app. Con Docker basta `docker compose up -d` (el contenedor corre
-`composer install` al arrancar); con PHP local, `composer install`.
+`down -v` borra la base de datos y todo lo que hayas registrado a mano.
 
-## Base de datos
+---
 
-- No usamos migraciones. La estructura está en `database/sql/01_estructura.sql`
-  (versión 3, **48 tablas**) y MySQL la ejecuta sola la primera vez que se crea el volumen.
-- Los datos base (roles, empleados, usuarios) se cargan solos si la BD está vacía.
-- Los datos clínicos de prueba (órdenes de examen, receta y lotes de medicamentos)
-  se cargan con:
+## 5. Aporte de Investigación Operativa II
+
+Menú del administrador → **Planificación de camas** (`/admin/planificacion-camas`).
+
+- Lee el historial de ocupación mensual de las camas (tablas `CAMA` e `INTERNACION`) y lo clasifica en estados de demanda.
+- Estima la matriz de transición de la cadena de Márkov, proyecta la demanda de los próximos meses, el estado
+  estable y los tiempos de retorno.
+- Evalúa las alternativas de capacidad con valor esperado, valor esperado de la información perfecta y simulación
+  de Montecarlo, y recomienda una decisión que queda auditada.
+- El motor está en `app/Support/ModeloCamas.php` y se valida contra los valores del informe con
+  `php artisan test --filter=ModeloCamasTest`.
+
+---
+
+## 6. Comandos útiles
 
 ```bash
-docker exec -it clinica_cies_app php artisan db:seed --class=DatosClinicosPruebaSeeder
+docker compose up -d                 # encender
+docker compose down                  # apagar (conserva los datos)
+docker compose down -v               # apagar y BORRAR la base de datos
+docker compose logs -f app           # ver el log de la aplicación
+docker exec -it clinica_cies_app php artisan view:clear     # si una vista no se actualiza
+docker exec -it clinica_cies_app php artisan test           # pruebas
 ```
 
-  El seeder se puede ejecutar varias veces sin duplicar datos.
-- Si cambias el SQL, recrea la BD (borra los datos): `docker compose down -v` y luego `docker compose up --build`.
-- `01_estructura.sql` debe estar guardado en **UTF-8**.
-- **Si ya tenías la BD de antes**, haz `docker compose down -v`: la versión 3 agrega la tabla
-  `LOTE_MEDICAMENTO` y columnas nuevas (`CAMCON_USR`, `EST_RES`, `CRI_RES`, `CANENT_DRE`, entre otras),
-  y el usuario `cies_app` solo existe en volúmenes creados con el script `02_usuario_auditoria.sql`.
+## 7. Flujo de trabajo en equipo
 
-## Usuarios de prueba
-
-| Usuario     | Contraseña     | Rol           |
-|-------------|----------------|---------------|
-| admin       | admin123       | Administrador |
-| recepcion   | recepcion123   | Recepcionista |
-| medico      | medico123      | Médico        |
-| enfermeria  | enfermeria123  | Enfermería    |
-| caja        | caja123        | Caja          |
-| paciente    | paciente123    | Paciente      |
-| laboratorio | laboratorio123 | Laboratorio   |
-| farmacia    | farmacia123    | Farmacia      |
-| auditor     | auditor123     | Auditor       |
-
-Cada rol entra a su propio panel. Si abre el de otro rol, devuelve 403.
-Las cuentas que crea el administrador piden cambiar la contraseña en el primer ingreso.
-
-## Módulos implementados
-
-**Administrador** (`admin`)
-- Usuarios: listado con búsqueda, crear, editar, cambiar rol, bloquear y desbloquear
-  (un admin no puede modificar su propia cuenta), bloqueo automático tras 3 intentos fallidos
-  y cambio de contraseña obligatorio en el primer ingreso.
-- Empleados: listado, crear y editar.
-- Pacientes: listado.
-
-**Laboratorio** (RF025–RF029)
-- Órdenes de examen con flujo `Pendiente → Muestra tomada → En proceso → Listo` (o `Cancelado`).
-- Carga, validación y publicación de resultados (`Cargado → Validado → Publicado`).
-- Si el valor es crítico, al publicar se genera una notificación para el médico que pidió el examen.
-
-**Farmacia** (RF040, RF042, RNF017)
-- Despacho de recetas ítem por ítem. Unidades requeridas = (24 ÷ frecuencia en horas) × días.
-  Se permite despacho parcial; la receta pasa a `Completada` cuando todos los ítems están entregados.
-- El stock se descuenta por **PEPS**: sale primero el lote que vence antes, y nunca se usan lotes vencidos.
-- Entradas de lote, bajas con motivo (`Merma`, `Rotura`, `Vencido`) y alertas de vencimiento (30 días).
-
-**Auditoría** (administrador y auditor)
-- Registro de las acciones en `AUDITORIA`, con dominios `DOM01` (usuarios), `DOM02` (seguridad),
-  `DOM03` (clínico) y `DOM04` (financiero/inventario).
-- Pantalla `/admin/auditoria` con filtros combinables: texto, usuario, paciente/expediente
-  (nombre, apellido, CI, `COD_PAC` o `NRO_HIS`), rol, acción, criticidad, dominio y rango de fechas.
-- Exportación a **Excel** (`.xlsx`) y **PDF** (A4 horizontal, máximo 2000 filas) respetando los filtros activos.
-  Cada exportación queda auditada (`Exportar Excel` / `Exportar PDF`, criticidad Media, `DOM02`).
-- Seguridad (`DOM02`): inicios de sesión, intentos fallidos, cierres de sesión, intentos sobre
-  cuentas bloqueadas y bloqueo automático (criticidad `Crítica`).
-- Los eventos anteriores al soporte de paciente muestran "—" en la columna Paciente
-  (la tabla es inmutable, no se corrigen).
-
-## Auditoría: cómo registrar eventos (helper `Auditoria`)
-
-Todo evento importante se guarda en la tabla `AUDITORIA` con el helper `App\Services\Auditoria`.
-
-```php
-use App\Services\Auditoria;
-
-Auditoria::registrar(
-    string $accion,        // qué pasó, máx. 20 caracteres (ej. 'Actualizar', 'Login', 'Login fallido')
-    string $criticidad,    // 'Baja' | 'Media' | 'Alta' | 'Crítica'
-    string $dominio,       // 'DOM01' | 'DOM02' | 'DOM03' | 'DOM04'
-    string $entidad,       // tabla afectada, máx. 30 (ej. 'USUARIO')
-    string $registro,      // código del registro afectado, máx. 15 (ej. 'USR00005')
-    string $detalle,       // descripción legible, se corta a 255
-    ?object $actor = null, // quién lo hizo; si es null se usa Auth::user()
-    ?string $codPac = null // paciente afectado (COD_PAC); si es null se usa $actor->COD_PAC si existe
-);
-```
-
-**Qué completa solo el helper:** `COD_AUD` (correlativo `AUD00000001`), `FEC_AUD`, `IP_AUD`,
-`DIS_AUD` (navegador, cortado a 60), `COD_USR` y `COD_ROL` del actor, y `COD_PAC`
-(`$codPac` si lo pasas; si no, `$actor->COD_PAC` cuando existe).
-
-**Dominios**
-
-| Código | Dominio | Se usa para |
-|--------|---------|-------------|
-| DOM01 | Usuarios | Crear, editar, bloquear/desbloquear usuarios |
-| DOM02 | Seguridad | Login, intentos fallidos, logout, bloqueos, exportaciones |
-| DOM03 | Clínico | Laboratorio y despachos de Farmacia |
-| DOM04 | Financiero | Inventario: entradas y bajas de lote |
-
-**Criticidades**
-
-| Criticidad | Cuándo usarla | Ejemplo |
-|------------|---------------|---------|
-| Baja | Acción de rutina | Login correcto, logout |
-| Media | Algo que conviene revisar | Contraseña incorrecta, intento sobre cuenta bloqueada, exportar reportes |
-| Alta | Cambio importante | Cambio de rol, baja de lote |
-| Crítica | Seguridad grave | Bloqueo automático por intentos fallidos |
-
-**Ejemplos de uso**
-
-```php
-// Dentro de un servicio o controlador con usuario autenticado
-Auditoria::registrar(
-    'Actualizar', 'Alta', 'DOM01', 'USUARIO', $usuario->COD_USR,
-    "Cambio de rol de {$usuario->USR_USR} a {$nuevoRol}"
-);
-
-// Cuando todavía no hay sesión (ej. login fallido): pasar el actor a mano
-Auditoria::registrar(
-    'Login fallido', 'Media', 'DOM02', 'USUARIO', $user->COD_USR,
-    "Contraseña incorrecta para {$user->USR_USR}",
-    $user
-);
-
-// Acción que afecta a un paciente distinto del actor: pasar codPac con argumento con nombre
-Auditoria::registrar(
-    'Despachar', 'Media', 'DOM03', 'DETALLE_RECETA', $item->COD_DRE,
-    "Despacho de {$medicamento}",
-    codPac: $codPac
-);
-```
-
-**Reglas**
-
-- `COD_USR` es obligatorio (FK a `USUARIO`), por eso un login con un usuario que no existe no se
-  puede guardar en `AUDITORIA`; ese caso solo va a `storage/logs`.
-- En el logout, auditar **antes** de `Auth::logout()`; después `Auth::user()` ya es `null`.
-- Nunca poner contraseñas ni datos sensibles en `$detalle`.
-- Los textos con tilde (`'Crítica'`) deben guardarse en UTF-8.
-- Pasar `codPac` cuando la acción afecta a un paciente distinto del actor (despacho de recetas,
-  resultados de laboratorio). Inventario, usuarios, empleados y login **no** llevan paciente.
-- `codPac` se pasa con argumento con nombre (`codPac: ...`) para no confundirlo con el actor.
-- `AUDITORIA` es inmutable: no se editan ni se borran eventos (el usuario `cies_app` no tiene
-  permisos de `UPDATE` ni `DELETE` sobre esa tabla).
-
-## Pendiente
-
-- Microservicio Quarkus: verificación OTP.
-- Farmacia: venta en mostrador con comprobante (RF041).
-- Pantallas aún en construcción: recepción, enfermería, caja, paciente, citas e internación.
-- Panel del médico: usa datos de ejemplo y todavía no muestra sus notificaciones.
-- Recuperar contraseña (`/recuperar-contrasena`) y registro de pacientes (`/register`).
-
-## Flujo de trabajo en equipo
-
-- `main` es la rama estable. **No se trabaja directo en `main`.**
-- Cada tarea va en su propia rama:
-
-```bash
-git checkout main
-git pull origin main
-git checkout -b feature/nombre-de-la-tarea
-```
-
-- Commits pequeños y claros, y se sube la rama:
-
-```bash
-git add .
-git commit -m "Describe lo que hiciste"
-git push -u origin feature/nombre-de-la-tarea
-```
-
-- En GitHub se abre un **Pull Request** hacia `main` y otro compañero lo revisa antes de unirlo.
-- Antes de empezar a trabajar: `git pull origin main`.
+- `main` es la rama estable. Cada tarea va en su rama `feature/...` y entra a `main` por Pull Request.
+- Antes de empezar: `git pull origin main`.
 - **Nunca** subir el archivo `.env`.
 
-## Problemas comunes
+## 8. Problemas comunes
 
 | Problema | Solución |
 |----------|----------|
-| `Cannot connect to the Docker daemon` | Docker Desktop está apagado; ábrelo y espera a que inicie |
-| Puerto 8001, 8081 o 3307 ocupado | Apaga lo que lo usa, o cambia el puerto izquierdo en `docker-compose.yml` |
-| `container name ... already in use` | Hay contenedores viejos: `docker compose down` y vuelve a levantar |
-| `Check constraint ... violated` | El SQL se guardó mal (debe ser UTF-8): corrige y haz `docker compose down -v` |
-| La app no conecta a la BD | Mira `docker compose logs mysql`; espera a que MySQL termine de iniciar |
-| El contenedor `app` dice "No se pudo leer la base de datos" tras un `git pull` | Tu volumen es anterior al usuario `cies_app`: `docker compose down -v` y levanta de nuevo |
-| `Access denied for user 'cies_app'` | Igual que arriba, o falta `DB_USERNAME`/`DB_PASSWORD` en tu `.env` (copia los de `.env.example`) |
-| Falta una tabla o columna (por ejemplo `LOTE_MEDICAMENTO` o `CAMCON_USR`) | Tu BD es de una versión anterior: `docker compose down -v` y levanta de nuevo |
-| Los paneles de Laboratorio o Farmacia salen vacíos | Falta cargar los datos clínicos de prueba (ver sección Base de datos) |
-| `Class "OpenSpout\..."` o `Class "Dompdf\..."` not found | Faltan dependencias de Composer: `docker compose up -d` (Docker) o `composer install` (PHP local) |
+| `Cannot connect to the Docker daemon` | Docker Desktop está apagado: ábrelo y espera a que inicie |
+| La página no abre o da error de conexión | Todavía está cargando: mira `docker compose logs -f app` y espera `Listo` |
+| Puerto 8001, 8025, 8081, 8082 o 3307 ocupado | Cierra lo que lo usa o cambia el puerto izquierdo en `docker-compose.yml` |
+| `container name ... already in use` | `docker compose down` y vuelve a levantar |
+| Los gráficos salen vacíos o faltan médicos | La carga de datos no terminó o falló: `docker compose down -v` y `docker compose up --build -d` |
+| Falta una tabla o columna | Tu base es de una versión anterior: `docker compose down -v` y levanta de nuevo |
+| `Access denied for user 'cies_app'` | Volumen viejo: `docker compose down -v`; con PHP local, revisa `DB_USERNAME`/`DB_PASSWORD` en `.env` |
+| No llega el código OTP | Ábrelo en Mailpit (http://localhost:8025) y revisa que el contenedor `clinica_cies_quarkus` esté corriendo |
+| `Class "Dompdf\..."` u `OpenSpout` not found | Faltan dependencias: `docker compose up -d` o `composer install` |
+| Los gráficos no se dibujan | Chart.js, los íconos y los estilos del panel médico se cargan desde Internet: revisa la conexión |

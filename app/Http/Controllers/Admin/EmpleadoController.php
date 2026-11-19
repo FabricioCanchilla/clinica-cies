@@ -36,7 +36,7 @@ class EmpleadoController extends Controller
                 });
             })
             ->when($cargo !== '', fn ($q) => $q->where('EMPLEADO.COD_CAR', $cargo))
-            ->orderBy('EMPLEADO.APE_EMP')
+            ->orderBy('EMPLEADO.COD_EMP')
             ->get();
 
         $cargos = DB::table('CARGO')->orderBy('DES_CAR')->get();
