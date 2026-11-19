@@ -82,7 +82,11 @@ class SupervisionController extends Controller
             ->leftJoin('PACIENTE as p', 'p.COD_PAC', '=', 'i.COD_PAC')
             ->orderBy('s.NOM_SAL')->orderBy('c.NRO_CAM')
             ->get(['c.COD_CAM', 'c.NRO_CAM', 'c.EST_CAM', 's.NOM_SAL', 's.UBI_SAL',
-                   'i.COD_INT', 'i.FECING_INT', 'i.MOT_INT', 'p.NOM_PAC', 'p.APE_PAC']);
+                   'i.COD_INT', 'i.FECING_INT', 'i.MOT_INT', 'i.AIS_INT', 'p.NOM_PAC', 'p.APE_PAC']);
+
+        // AJ08: limpieza pendiente o en proceso de cada cama
+        $limpiezas = DB::table('LIMPIEZA_CAMA')->where('EST_LIM', '<>', 'Completada')->get()->keyBy('COD_CAM');
+        $camas->each(fn ($c) => $c->LIMPIEZA = $limpiezas[$c->COD_CAM] ?? null);
 
         $internaciones = DB::table('INTERNACION as i')
             ->join('PACIENTE as p', 'p.COD_PAC', '=', 'i.COD_PAC')

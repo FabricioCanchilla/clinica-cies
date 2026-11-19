@@ -390,6 +390,17 @@
                 <a href="{{ route('admin.internacion') }}" class="{{ request()->routeIs('admin.internacion*') ? 'activo' : '' }}">
                     <i class="fas fa-bed"></i> Internación
                 </a>
+                <a href="{{ route('admin.recomendador') }}" class="{{ request()->routeIs('admin.recomendador*') ? 'activo' : '' }}">
+                    <i class="fas fa-chart-line"></i> Planificación de camas
+                </a>
+
+                <div class="nav-titulo">Reportes</div>
+                <a href="{{ route('admin.reportes') }}" class="{{ request()->routeIs('admin.reportes*') ? 'activo' : '' }}">
+                    <i class="fas fa-chart-pie"></i> Reportes de atención
+                </a>
+                <a href="{{ route('reportes.pacientes') }}" class="{{ request()->routeIs('reportes.*') ? 'activo' : '' }}">
+                    <i class="fas fa-file-medical"></i> Reporte por paciente
+                </a>
 
                 <div class="nav-titulo">Control</div>
                 <a href="{{ route('admin.auditoria') }}" class="{{ request()->routeIs('admin.auditoria*') ? 'activo' : '' }}">
@@ -418,12 +429,18 @@
                 <a href="{{ route('enfermeria.insumos.crear') }}" class="{{ request()->routeIs('enfermeria.insumos.crear') ? 'activo' : '' }}">
                     <i class="fas fa-plus"></i> Registrar insumo
                 </a>
+                <a href="{{ route('enfermeria.camas') }}" class="{{ request()->routeIs('enfermeria.camas') ? 'activo' : '' }}">
+                    <i class="fas fa-bed"></i> Camas e internación
+                </a>
             @elseif ($rol === 'ROL002')
                 <a href="{{ route('recepcion.dashboard') }}" class="{{ request()->routeIs('recepcion.dashboard') ? 'activo' : '' }}">
                     <i class="fas fa-clipboard-check"></i> Citas de hoy
                 </a>
                 <a href="{{ route('recepcion.pacientes') }}" class="{{ request()->routeIs('recepcion.pacientes*', 'recepcion.paciente', 'recepcion.reprogramar') ? 'activo' : '' }}">
                     <i class="fas fa-users"></i> Pacientes
+                </a>
+                <a href="{{ route('reportes.pacientes') }}" class="{{ request()->routeIs('reportes.*') ? 'activo' : '' }}">
+                    <i class="fas fa-file-medical"></i> Reporte por paciente
                 </a>
             @elseif ($rol === 'ROL005')
                 <a href="{{ route('caja.dashboard') }}" class="activo">
@@ -435,6 +452,12 @@
                 </a>
                 <a href="{{ route('medico.dashboard') }}#agenda">
                     <i class="fas fa-calendar-alt"></i> Mi agenda
+                </a>
+                <a href="{{ route('medico.estadisticas') }}" class="{{ request()->routeIs('medico.estadisticas') ? 'activo' : '' }}">
+                    <i class="fas fa-chart-pie"></i> Mis estadísticas
+                </a>
+                <a href="{{ route('reportes.pacientes') }}" class="{{ request()->routeIs('reportes.*') ? 'activo' : '' }}">
+                    <i class="fas fa-file-medical"></i> Reporte de mis pacientes
                 </a>
                 @if (request()->routeIs('medico.atender'))
                     <a href="{{ url()->current() }}" class="activo">
@@ -471,6 +494,9 @@
                 </a>
                 <a href="{{ route('paciente.dashboard') }}#mi-perfil" data-seccion="mi-perfil">
                     <i class="fas fa-user-circle"></i> Mi perfil
+                </a>
+                <a href="{{ route('paciente.reporte') }}" class="{{ request()->routeIs('paciente.reporte') ? 'activo' : '' }}">
+                    <i class="fas fa-file-medical"></i> Mi reporte
                 </a>
             @endif
 

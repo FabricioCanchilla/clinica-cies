@@ -44,6 +44,6 @@
         <p style="margin-top: 12px;"><strong>Indicaciones:</strong> {{ $r->OBS_REC }}</p>
     @endif
 
-    <p class="pie">Receta electrónica emitida por el Sistema de Gestión de la Clínica CIES. Se despacha en farmacia con el código {{ $r->COD_REC }}.</p>
+    <p class="pie">Receta electrónica de la Clínica CIES La Paz. Se despacha en farmacia con el código {{ $r->COD_REC }}.</p>
 </body>
 </html>

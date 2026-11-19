@@ -39,7 +39,7 @@ class RecepcionService
                   ->orWhere('p.COD_PAC', $q)
                   ->orWhere(DB::raw("CONCAT(p.NOM_PAC, ' ', p.APE_PAC)"), 'like', '%' . $q . '%');
             })
-            ->orderBy('p.APE_PAC')
+            ->orderBy('p.COD_PAC')
             ->limit(30)
             ->get(['p.*', 'u.USR_USR', 'u.EST_USR']);
     }

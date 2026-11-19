@@ -80,7 +80,8 @@
                             <td>{{ $bs($c->PRE_SRV) }}</td>
                             <td>{{ $bs($c->PAGADO) }}</td>
                             <td><strong>{{ $bs($c->SALDO) }}</strong></td>
-                            <td><a href="{{ route('caja.cobrar', $c->COD_CIT) }}" class="btn principal">Cobrar</a></td>
+                            <td class="acciones"><a href="{{ route('caja.cobrar', $c->COD_CIT) }}" class="btn principal">Cobrar</a>
+                                <a href="{{ route('ordenes.pago', $c->COD_CIT) }}" class="btn sm" title="Orden de pago"><i class="fas fa-file-invoice-dollar"></i> OP</a></td>
                         </tr>
                     @empty
                         <tr><td colspan="8">No hay citas con saldo pendiente{{ $buscar !== '' ? ' para esa búsqueda' : '' }}.</td></tr>

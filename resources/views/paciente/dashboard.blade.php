@@ -123,6 +123,10 @@
                                         </form>
                                     @endif
 
+                                    @if (in_array($cita->EST_CIT, ['Confirmada', 'Atendida'], true))
+                                        <a href="{{ route('ordenes.pago', $cita->COD_CIT) }}" class="btn sm"><i class="fas fa-file-invoice-dollar"></i> Orden de pago</a>
+                                    @endif
+
                                     {{-- RF009: cancelar o reprogramar (RN21, RN22) --}}
                                     @if (in_array($cita->EST_CIT, ['Confirmada', 'Pendiente de pago'], true))
                                         @php

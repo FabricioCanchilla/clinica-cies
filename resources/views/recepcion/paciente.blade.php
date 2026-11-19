@@ -70,6 +70,9 @@
                             <td>{{ $c->NOM_SRV }}</td>
                             <td>{{ $c->EST_CIT }}</td>
                             <td>
+                                @if (in_array($c->EST_CIT, ['Confirmada', 'Atendida', 'Pendiente de pago'], true))
+                                    <a href="{{ route('ordenes.pago', $c->COD_CIT) }}" class="btn"><i class="fas fa-file-invoice-dollar"></i> Orden de pago</a>
+                                @endif
                                 @if ($c->EST_CIT === 'Confirmada')
                                     <a href="{{ route('recepcion.reprogramar', $c->COD_CIT) }}" class="btn">Reprogramar</a>
                                 @endif

@@ -99,6 +99,13 @@
 
         vaciar(selHora, 'Elige médico y fecha');
         selHora.disabled = true;
+
+        // Propone el servicio de consulta de la especialidad elegida
+        const nombre = (this.selectedOptions[0] ? this.selectedOptions[0].textContent : '').trim().toLowerCase();
+        const selServicio = document.getElementById('servicio');
+        const op = [...selServicio.options].find(o => o.value && o.textContent.toLowerCase().includes(nombre))
+                || (nombre === 'medicina general' ? [...selServicio.options].find(o => o.textContent.toLowerCase().includes('consulta general')) : null);
+        if (op) selServicio.value = op.value;
     });
 
     async function cargarHorarios() {

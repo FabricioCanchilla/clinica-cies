@@ -67,6 +67,10 @@ class CajaService
             ->whereRaw('s.PRE_SRV > (' . $pagado->toSql() . ')', $pagado->getBindings());
 
         $buscar = trim($buscar);
+        // La orden de pago se identifica como OP-<código de cita>
+        if (stripos($buscar, 'OP-') === 0) {
+            $buscar = substr($buscar, 3);
+        }
         if ($buscar !== '') {
             $q->where(function ($w) use ($buscar) {
                 $w->where('c.COD_CIT', $buscar)
