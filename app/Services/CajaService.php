@@ -60,7 +60,7 @@ class CajaService
             ->join('PACIENTE as p', 'p.COD_PAC', '=', 'c.COD_PAC')
             ->join('SERVICIO as s', 's.COD_SRV', '=', 'c.COD_SRV')
             ->join('EMPLEADO as e', 'e.COD_EMP', '=', 'c.COD_EMP')
-            ->whereIn('c.EST_CIT', ['Confirmada', 'Atendida'])
+            ->whereIn('c.EST_CIT', ['Confirmada', 'En espera', 'En consulta', 'Atendida'])
             ->select(['c.COD_CIT', 'c.FEC_CIT', 'c.HOR_CIT', 'c.EST_CIT', 'p.NOM_PAC', 'p.APE_PAC', 'p.CI_PAC',
                       's.NOM_SRV', 's.PRE_SRV', 'e.TIT_EMP', 'e.APE_EMP'])
             ->selectSub($pagado, 'PAGADO')
@@ -80,7 +80,8 @@ class CajaService
             });
         }
 
-        return $q->orderBy('c.FEC_CIT')->orderBy('c.HOR_CIT')->limit(50)->get()
+        // Lo más nuevo primero: la última cita registrada arriba
+        return $q->orderByDesc('c.id')->limit(50)->get()
             ->each(fn ($c) => $c->SALDO = round((float) $c->PRE_SRV - (float) $c->PAGADO, 2));
     }
 
@@ -104,7 +105,7 @@ class CajaService
                 $q->from('COMPROBANTE as k')->whereColumn('k.COD_CIT', 'p.COD_CIT')
                   ->where('k.EST_COM', 'Emitido')->whereNotNull('k.COD_CAJ');
             })
-            ->orderBy('p.id')
+            ->orderByDesc('p.id')
             ->get(['p.COD_PAG', 'p.FEC_PAG', 'p.MON_PAG', 'p.COD_CIT', 'pa.NOM_PAC', 'pa.APE_PAC']);
     }
 
@@ -190,7 +191,7 @@ class CajaService
             $cita = DB::table('CITA as c')->join('SERVICIO as s', 's.COD_SRV', '=', 'c.COD_SRV')
                 ->where('c.COD_CIT', $codCit)->lockForUpdate()
                 ->first(['c.COD_CIT', 'c.EST_CIT', 'c.COD_PAC', 's.PRE_SRV', 's.NOM_SRV']);
-            if (!$cita || !in_array($cita->EST_CIT, ['Confirmada', 'Atendida'], true)) {
+            if (!$cita || !in_array($cita->EST_CIT, ['Confirmada', 'En espera', 'En consulta', 'Atendida'], true)) {
                 throw new DomainException('Solo se cobran citas Confirmadas o Atendidas.');
             }
 

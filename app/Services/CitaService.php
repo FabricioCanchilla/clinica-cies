@@ -69,7 +69,7 @@ class CitaService
             ->where('COD_EMP', $codEmp)
             ->where('FEC_CIT', $fecha->toDateString())
             ->where(function ($q) use ($ahora) {
-                $q->whereIn('EST_CIT', ['Confirmada', 'Atendida'])
+                $q->whereIn('EST_CIT', ['Confirmada', 'En espera', 'En consulta', 'Atendida'])
                   ->orWhere(function ($q2) use ($ahora) {
                       $q2->where('EST_CIT', 'Pendiente de pago')
                          ->where('FECEXP_CIT', '>=', $ahora->toDateTimeString());
@@ -193,7 +193,8 @@ class CitaService
             ->join('EMPLEADO as e', 'e.COD_EMP', '=', 'c.COD_EMP')
             ->join('SERVICIO as s', 's.COD_SRV', '=', 'c.COD_SRV')
             ->where('c.COD_PAC', $codPac)
-            ->orderByDesc('c.FEC_CIT')->orderByDesc('c.HOR_CIT')
+            // Lo más nuevo primero: la última cita agendada (hoy) arriba y de ahí hacia atrás
+            ->orderByDesc('c.id')
             ->select(['c.COD_CIT', 'c.FEC_CIT', 'c.HOR_CIT', 'c.EST_CIT', 'c.MOT_CIT', 'c.FECEXP_CIT',
                       'e.TIT_EMP', 'e.NOM_EMP', 'e.APE_EMP', 's.NOM_SRV'])
             // Comprobante del anticipo (en línea) y si hay un anticipo confirmado sin comprobante

@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\DB;
  */
 class AtencionController extends Controller
 {
+    /** AJ01: estados desde los que el médico puede atender la cita */
+    public const ATENDIBLES = ['Confirmada', 'En espera', 'En consulta'];
+
     private function citaDelMedico(string $codCit): object
     {
         $c = DB::table('CITA as c')
@@ -29,8 +32,14 @@ class AtencionController extends Controller
     public function form(string $codCit)
     {
         $c = $this->citaDelMedico($codCit);
-        if ($c->EST_CIT !== 'Confirmada') {
-            return redirect()->route('medico.dashboard')->withErrors(['cita' => "La cita está {$c->EST_CIT}: solo se atienden citas confirmadas."]);
+        if (!in_array($c->EST_CIT, self::ATENDIBLES, true)) {
+            return redirect()->route('medico.dashboard')->withErrors(['cita' => "La cita está {$c->EST_CIT}: solo se atienden citas confirmadas o con el paciente en espera."]);
+        }
+        // AJ01: al abrir la atención la cita pasa a «En consulta»
+        if ($c->EST_CIT !== 'En consulta') {
+            DB::table('CITA')->where('COD_CIT', $codCit)->update(['EST_CIT' => 'En consulta']);
+            Auditoria::registrar('Iniciar consulta', 'Baja', 'DOM03', 'CITA', $codCit,
+                "Estado: {$c->EST_CIT} -> En consulta", codPac: $c->COD_PAC);
         }
 
         $his = DB::table('HISTORIA_CLINICA')->where('COD_PAC', $c->COD_PAC)->first();
@@ -57,6 +66,9 @@ class AtencionController extends Controller
             // RF018: catálogo de medicamentos y vías; RF019: exámenes (servicios de Laboratorio)
             'medicamentos' => DB::table('MEDICAMENTO')->orderBy('DES_MED')->get(),
             'vias'         => DB::table('VIA_ADMIN')->orderBy('DES_VIA')->get(),
+            'especialidades' => DB::table('ESPECIALIDAD')->orderBy('DES_ESP')->get(),
+            'signo'        => DB::table('SIGNO_VITAL')->where('COD_PAC', $c->COD_PAC)->orderByDesc('FEC_SIV')->first(),
+            'antecedentes' => $his ? DB::table('ANTECEDENTE')->where('COD_HIS', $his->COD_HIS)->get() : collect(),
             'examenes'     => DB::table('SERVICIO as s')->join('CLASIFICACION_SERVICIO as c', 'c.COD_CLA', '=', 's.COD_CLA')
                                 ->where('c.DES_CLA', '!=', 'Consulta')->orderBy('s.NOM_SRV')->get(['s.COD_SRV', 's.NOM_SRV', 'c.DES_CLA']),
         ]);
@@ -65,7 +77,14 @@ class AtencionController extends Controller
     public function guardar(Request $request, string $codCit)
     {
         $datos = $request->validate([
+            // RN43: la consulta no se cierra sin un diagnóstico codificado con CIE-10
+            'cie'                  => 'required|exists:CIE10,COD_CIE',
             'diagnostico'          => 'required|string|max:200',
+            // RF023: derivación o interconsulta (opcional)
+            'deriv_esp'            => 'nullable|exists:ESPECIALIDAD,COD_ESP',
+            'deriv_tipo'           => 'nullable|in:Derivación,Interconsulta',
+            'deriv_prioridad'      => 'nullable|in:Normal,Urgente',
+            'deriv_motivo'         => 'nullable|required_with:deriv_esp|string|min:10|max:300',
             'plan'                 => 'required|string|max:255',
             'evolucion'            => 'required|string|max:500',
             // Alergia nueva detectada en la consulta (opcional)
@@ -91,6 +110,9 @@ class AtencionController extends Controller
             'items.*.frecuencia.required_with' => 'Indica la frecuencia (horas) de cada medicamento.',
             'items.*.duracion.required_with'   => 'Indica la duración (días) de cada medicamento.',
             'indicaciones.required_with'       => 'Escribe las indicaciones clínicas de la orden de examen.',
+            'cie.required'                     => 'Selecciona el diagnóstico del catálogo CIE-10 (RN43).',
+            'cie.exists'                       => 'El código CIE-10 no está en el catálogo.',
+            'deriv_motivo.required_with'       => 'Escribe el motivo de la derivación.',
         ], ['diagnostico' => 'diagnóstico', 'plan' => 'plan de tratamiento', 'evolucion' => 'nota de evolución']);
 
         $codEmp = auth()->user()->COD_EMP;
@@ -110,10 +132,10 @@ class AtencionController extends Controller
         }
 
         try {
-        DB::transaction(function () use ($codCit, $codEmp, $datos, $items, $conflictos) {
+        $codCns = DB::transaction(function () use ($codCit, $codEmp, $datos, $items, $conflictos) {
             $c = DB::table('CITA')->where('COD_CIT', $codCit)->where('COD_EMP', $codEmp)->lockForUpdate()->first();
             abort_if(!$c, 404);
-            if ($c->EST_CIT !== 'Confirmada') {
+            if (!in_array($c->EST_CIT, self::ATENDIBLES, true)) {
                 throw new \DomainException("La cita está {$c->EST_CIT}: solo se atienden citas confirmadas.");
             }
 
@@ -139,6 +161,7 @@ class AtencionController extends Controller
                 'COD_CNS' => $codCns,
                 'FEC_CNS' => now(),
                 'DIA_CNS' => trim($datos['diagnostico']),
+                'COD_CIE' => $datos['cie'],
                 'PLA_CNS' => trim($datos['plan']),
                 'COD_CIT' => $codCit,
                 'COD_HIS' => $his->COD_HIS,
@@ -217,7 +240,14 @@ class AtencionController extends Controller
             DB::table('CITA')->where('COD_CIT', $codCit)->update(['EST_CIT' => 'Atendida']);
 
             Auditoria::registrar('Atender cita', 'Media', 'DOM03', 'CONSULTA', $codCns,
-                "Consulta {$codCns} de la cita {$codCit}: diagnóstico y nota de evolución registrados", codPac: $c->COD_PAC);
+                "Consulta {$codCns} de la cita {$codCit}: diagnóstico {$datos['cie']} y nota de evolución registrados", codPac: $c->COD_PAC);
+
+            // RF023: derivación desde la consulta
+            if (!empty($datos['deriv_esp'])) {
+                app(\App\Services\HistoriaClinicaService::class)->derivar($c->COD_PAC, $codEmp, $datos['deriv_esp'],
+                    $datos['deriv_tipo'] ?? 'Interconsulta', $datos['deriv_prioridad'] ?? 'Normal', trim($datos['deriv_motivo']), $codCns);
+            }
+            return $codCns;
         });
         } catch (\DomainException $e) {
             return redirect()->route('medico.dashboard')->withErrors(['cita' => $e->getMessage()]);

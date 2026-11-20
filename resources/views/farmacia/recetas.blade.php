@@ -9,6 +9,9 @@
 @section('contenido')
     <h1>Recetas</h1>
     <p class="sub">Despacho de recetas electrónicas con descuento de stock por lote (PEPS).</p>
+    @php $panel = app(\App\Services\IndicadoresRolService::class)->farmacia(); @endphp
+    <h2 style="margin-top: 8px;"><i class="fas fa-chart-column"></i> Indicadores</h2>
+    @include('partials.panel-graficos', ['panel' => $panel])
 
     @if ($alertas['vencidos'] > 0 || $alertas['por_vencer'] > 0)
         <div class="alerta" style="background:#fffbeb; border-color:#fde68a; color:#92400e;">

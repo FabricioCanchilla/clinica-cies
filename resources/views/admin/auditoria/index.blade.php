@@ -5,6 +5,9 @@
 @section('contenido')
     <h1>Auditoría</h1>
     <p class="sub">Registro de acciones del sistema. Solo lectura: no se puede editar ni eliminar.</p>
+    @php $panel = app(\App\Services\IndicadoresRolService::class)->auditoria(); @endphp
+    <h2 style="margin-top: 8px;"><i class="fas fa-chart-column"></i> Resumen de los últimos 30 días</h2>
+    @include('partials.panel-graficos', ['panel' => $panel])
 
     @if ($errors->any())
         <div class="card" style="margin-bottom: 12px;">

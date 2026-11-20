@@ -111,15 +111,16 @@ Cada rol entra solo a su panel; si abre el de otro rol, el sistema responde 403.
 
 | Módulo | Funciones principales |
 |--------|-----------------------|
-| **Público** | Presentación de la clínica, especialidades, mapa y contacto, botón de emergencia, registro de pacientes |
+| **Público** | Portada y páginas Nosotros, Servicios (médicos, horarios y tarifas), Investigación, Ubicación (red La Paz y mapa) y Contacto con datos de cies.org.bo (`config/clinica.php`); **Agendar cita** lleva al formulario del paciente o al acceso/registro; botón de emergencia y WhatsApp |
 | **Paciente** | Agendar cita (el horario queda reservado 15 min), pagar el anticipo con firma y OTP, cancelar y reprogramar, historial, recetas en PDF, resultados, pagos y comprobantes, orden de pago, **mi reporte** |
 | **Recepción** | Citas del día y check-in (tolerancia de 15 min), alta presencial de pacientes, validación de seguros, disponibilidad de médicos, consultorios y camas, órdenes de pago |
-| **Médico** | Agenda real, atención con consulta y nota de evolución, receta con alerta de alergias, órdenes de examen, **estadísticas** de sus pacientes y reporte de cada paciente |
+| **Médico** | Agenda real, atención con diagnóstico **CIE-10 obligatorio**, receta con alerta de alergias, órdenes de examen, **historia clínica completa** (antecedentes, alergias, adendas, signos, resultados), **derivaciones e interconsultas**, **consentimiento informado con firma**, acceso de emergencia auditado, estadísticas |
 | **Laboratorio** | Flujo de la orden, carga, validación y publicación de resultados, alerta de valor crítico |
-| **Farmacia** | Despacho de recetas ítem por ítem, stock por lote con PEPS, bajas y alertas de vencimiento |
-| **Enfermería** | Insumos que traen los familiares (firma + OTP + comprobante); **camas e internación con control de limpieza y aislamiento** |
+| **Farmacia** | Despacho de recetas ítem por ítem, stock por lote con PEPS, bajas y alertas de vencimiento, **venta en mostrador** o cargo a hospitalizados con recibo PDF y anulación |
+| **Enfermería** | Insumos que traen los familiares (firma + OTP + comprobante); camas e internación con limpieza y aislamiento; **pacientes internados**: signos vitales (RN40), dosis con **5 correctos** (pulsera/código), omisiones con incidencia y aviso al médico, notas, **balance hídrico** y **cambio de turno** |
 | **Caja** | Apertura y cierre con arqueo, cobro del saldo por **orden de pago**, descuentos con autorización, anulaciones, comprobantes PDF |
 | **Administración** | Dashboard con gráficos, **reportes de atención**, reporte por paciente, usuarios, empleados, supervisión de citas, caja e internación |
+| **Configuración** | Parámetros (anticipo, inactividad, días de agenda, descuento, limpieza, retención), especialidades, tarifas, precios de farmacia, **matriz de permisos por rol** y **respaldos** con prueba de restauración |
 | **Auditoría** | Registro inmutable por dominio y criticidad, filtros, exportación a Excel y PDF, alertas críticas |
 | **Planificación de camas (IO II)** | Recomendador de capacidad de camas a partir del historial de ocupación (ver sección 5) |
 
@@ -158,6 +159,7 @@ No usamos migraciones. MySQL ejecuta solo, la primera vez que se crea el volumen
 | `02_usuario_auditoria.sql` | Usuario `cies_app`: no puede modificar ni borrar `AUDITORIA` |
 | `03_usuario_quarkus.sql` | Usuario del microservicio Quarkus |
 | `04_ajustes_defensa.sql` | AJ07 aislamiento en `INTERNACION` y AJ08 tabla `LIMPIEZA_CAMA` |
+| `05_ajustes_v6.sql` | AJ01 estados «En espera»/«En consulta», AJ04 dosis sin insumo, AJ05 consentimiento, derivaciones, notas de enfermería, balance hídrico y parámetros, CIE-10, venta en mostrador y respaldos |
 
 Los datos se cargan con `php artisan db:seed` (lo hace solo el contenedor si la BD está vacía):
 
@@ -167,6 +169,8 @@ Los datos se cargan con `php artisan db:seed` (lo hace solo el contenedor si la 
 | `UsuariosPruebaSeeder` | Un usuario por rol y la paciente de prueba |
 | `DatosClinicosPruebaSeeder` | Órdenes de examen, receta y lotes de medicamentos |
 | `HistorialInternacionSeeder` | Sala de 10 camas y 3 años de internaciones (planificación de camas) |
+| `CatalogosV6Seeder` | Catálogo CIE-10 (y codificación de las consultas de demo), medicamentos con precio y lotes, permisos por rol |
+| `DemostracionV6Seeder` | 90 días de exámenes con resultados y valores críticos, recetas, 30 días de ventas en farmacia y cuidados de enfermería de los internados (dosis, signos, balance, turnos) |
 | `DemostracionClinicaSeeder` | 14 especialidades, 10 consultorios, 17 médicos con horario, pacientes adultos y niños, un año de citas con consultas y pagos, estados de cama de ejemplo |
 
 **Cada vez que cambie algo en `database/sql/` o en los seeders, recrea la base:**
@@ -202,7 +206,10 @@ docker compose down                  # apagar (conserva los datos)
 docker compose down -v               # apagar y BORRAR la base de datos
 docker compose logs -f app           # ver el log de la aplicación
 docker exec -it clinica_cies_app php artisan view:clear     # si una vista no se actualiza
-docker exec -it clinica_cies_app php artisan test           # pruebas
+docker exec -it clinica_cies_app php artisan test           # pruebas (incluye FuncionalidadesInformeTest sobre la BD de demo)
+docker exec -it clinica_cies_app php artisan respaldo:crear  # copia de seguridad ahora (también a las 02:00)
+docker exec -it clinica_cies_app php artisan respaldo:probar # restaura la última copia en clinica_cies_restauracion y verifica
+docker exec -it clinica_cies_app php artisan schedule:list   # tareas programadas (el contenedor corre schedule:work)
 ```
 
 ## 7. Flujo de trabajo en equipo

@@ -13,6 +13,9 @@
 @section('contenido')
     <h1>Órdenes de examen</h1>
     <p class="sub">Toma de muestra, carga, validación y publicación de resultados.</p>
+    @php $panel = app(\App\Services\IndicadoresRolService::class)->laboratorio(); @endphp
+    <h2 style="margin-top: 8px;"><i class="fas fa-chart-column"></i> Indicadores</h2>
+    @include('partials.panel-graficos', ['panel' => $panel])
 
     <div class="grid">
         @foreach ($estados as $e)
@@ -87,6 +90,9 @@
                                     <span class="badge critica">Crítico</span>
                                 @endif
                                 <div style="color: var(--suave); font-size: 12px; margin-top: 4px;">{{ \Illuminate\Support\Str::limit($o->DES_RES, 90) }}</div>
+                                    @if ($o->ARC_RES)
+                                        <a href="{{ route('resultados.archivo', $o->COD_RES) }}" target="_blank" class="btn sm" style="margin-top: 4px;"><i class="fas fa-paperclip"></i> Adjunto</a>
+                                    @endif
                             @else
                                 —
                             @endif

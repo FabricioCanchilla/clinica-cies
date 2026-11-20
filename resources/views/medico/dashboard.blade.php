@@ -16,7 +16,7 @@
             </div>
 
             <!-- RF021: programación del día -->
-            <div id="citas-hoy" class="bg-white rounded-2xl shadow-sm border border-borderlight p-5 mb-6">
+            <div id="citas-hoy" data-vivo class="bg-white rounded-2xl shadow-sm border border-borderlight p-5 mb-6">
                 <h3 class="text-base font-bold text-slate-800 mb-3"><i class="fas fa-calendar-day text-cies mr-1"></i> Citas de hoy ({{ \Carbon\Carbon::today()->format('d/m/Y') }})</h3>
                 @if ($hoy->isEmpty())
                     <p class="text-sm text-slate-500">No tiene citas programadas para hoy.</p>
@@ -37,7 +37,7 @@
                                         <td class="py-2 pr-3">{{ $c['servicio'] }} · {{ $c['consultorio'] }}</td>
                                         <td class="py-2"><span class="estado-{{ \Illuminate\Support\Str::slug($c['estado']) }} text-[11px] px-2.5 py-1 rounded-full font-bold">{{ $c['estado'] }}</span></td>
                                         <td class="py-2">
-                                            @if ($c['estado'] === 'Confirmada')
+                                            @if (in_array($c['estado'], \App\Http\Controllers\Medico\AtencionController::ATENDIBLES, true))
                                                 <a href="{{ route('medico.atender', $c['codigo']) }}" class="bg-cies text-white text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap">
                                                     <i class="fas fa-stethoscope"></i> Atender
                                                 </a>
@@ -51,7 +51,13 @@
                 @endif
             </div>
 
-            <!-- Calendario - ELIMINADA LA ALTURA FIJA -->
+            <div class="mb-6">
+            @php $panel = app(\App\Services\IndicadoresRolService::class)->medico(auth()->user()->COD_EMP); @endphp
+    <h2 style="margin-top: 8px;"><i class="fas fa-chart-column"></i> Mis indicadores</h2>
+    @include('partials.panel-graficos', ['panel' => $panel])
+            </div>
+
+            <!-- Calendario -->
             <div id="agenda" x-data="calendarioApp({{ json_encode($citas) }})" class="bg-white rounded-2xl shadow-sm border border-borderlight overflow-hidden flex flex-col mb-8">
                 
                 <!-- Controles del Calendario -->

@@ -66,7 +66,7 @@
                 labels: etiquetas,
                 datasets: nombres.map((n, i) => ({
                     label: n, data: series[n], borderRadius: 6, maxBarThickness: 46,
-                    backgroundColor: op.colores ? op.colores : (nombres.length === 1 && op.multicolor ? etiquetas.map((_, j) => CIES.colores[j % 14]) : CIES.colores[i % 14]),
+                    backgroundColor: op.colores ? (nombres.length > 1 ? op.colores[i % op.colores.length] : op.colores) : (nombres.length === 1 && op.multicolor ? etiquetas.map((_, j) => CIES.colores[j % 14]) : CIES.colores[i % 14]),
                 })),
             },
             options: {

@@ -121,6 +121,6 @@ class RegistroController extends Controller
         Auth::login($usuario);
         $request->session()->regenerate();
 
-        return redirect()->route('panel')->with('ok', 'Cuenta creada. Tu usuario es tu número de CI.');
+        return redirect()->intended(route('panel'))->with('ok', 'Cuenta creada. Tu usuario es tu número de CI.');
     }
 }

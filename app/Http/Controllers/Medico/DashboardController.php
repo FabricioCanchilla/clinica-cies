@@ -46,7 +46,7 @@ class DashboardController extends Controller
         return view('medico.dashboard', [
             'citas'   => $citas,
             'hoy'     => $hoy,
-            'estados' => ['Pendiente de pago', 'Confirmada', 'Atendida', 'Cancelada', 'Expirada', 'No asistio'],
+            'estados' => ['Pendiente de pago', 'Confirmada', 'En espera', 'En consulta', 'Atendida', 'Cancelada', 'Expirada', 'No asistio'],
         ]);
     }
 }

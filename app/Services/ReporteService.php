@@ -19,7 +19,7 @@ class ReporteService
     public const MESES = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     public const MESES_LARGOS = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
                                  'septiembre', 'octubre', 'noviembre', 'diciembre'];
-    public const ESTADOS = ['Atendida', 'Confirmada', 'Pendiente de pago', 'No asistio', 'Cancelada', 'Expirada'];
+    public const ESTADOS = ['Atendida', 'Confirmada', 'En espera', 'En consulta', 'Pendiente de pago', 'No asistio', 'Cancelada', 'Expirada'];
 
     // ------------------------------------------------------------------
     // Filtro común

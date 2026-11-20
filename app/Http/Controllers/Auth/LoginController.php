@@ -25,9 +25,10 @@ class LoginController extends Controller
     public function showForm()
     {
         // RF001: el Dashboard público muestra las especialidades registradas
-        $especialidades = \Illuminate\Support\Facades\DB::table('ESPECIALIDAD')->orderBy('DES_ESP')->get(['DES_ESP']);
+        $especialidades = \App\Http\Controllers\PublicoController::especialidades();
+        $cifras = \App\Http\Controllers\PublicoController::cifras();
 
-        return view('auth.login', compact('especialidades'));
+        return view('auth.login', compact('especialidades', 'cifras'));
     }
 
     public function login(Request $request)
@@ -217,7 +218,11 @@ class LoginController extends Controller
             "Inicio de sesión de {$user->USR_USR}" . ($con2fa ? ' con segundo factor OTP' : '')
         );
 
-        return redirect()->route('panel');
+        // «Agendar cita» guarda el formulario del paciente como destino; a otro rol se lo lleva a su panel
+        if ($user->COD_ROL !== 'ROL006' && str_contains((string) session('url.intended'), '/paciente/')) {
+            session()->forget('url.intended');
+        }
+        return redirect()->intended(route('panel'));
     }
 
     private function enmascarar(string $correo): string

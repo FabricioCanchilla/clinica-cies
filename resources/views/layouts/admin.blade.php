@@ -237,6 +237,12 @@
         .estado-cancelada         { background: #fee2e2; color: #b91c1c; border-color: #ef4444; }
         .estado-expirada          { background: #f1f5f9; color: #64748b; border-color: #94a3b8; }
         .estado-no-asistio        { background: #fce7f3; color: #9d174d; border-color: #ec4899; }
+        .estado-en-espera         { background: #ede9fe; color: #5b21b6; border-color: #8b5cf6; }
+        .estado-en-consulta       { background: #ccfbf1; color: #115e59; border-color: #14b8a6; }
+        /* RN06: aviso de cierre por inactividad */
+        #aviso-inactividad { position: fixed; right: 20px; bottom: 20px; z-index: 50; max-width: 340px; background: #fff;
+            border: 1px solid #fde68a; border-left: 5px solid var(--naranja); border-radius: 12px; padding: 14px 16px;
+            box-shadow: 0 10px 30px rgba(15,23,42,.18); font-size: 14px; display: none; }
 
         .barra { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
         .barra input, .barra select {
@@ -406,6 +412,9 @@
                 <a href="{{ route('admin.auditoria') }}" class="{{ request()->routeIs('admin.auditoria*') ? 'activo' : '' }}">
                     <i class="fas fa-clipboard-list"></i> Auditoría
                 </a>
+                <a href="{{ route('admin.configuracion') }}" class="{{ request()->routeIs('admin.configuracion*') ? 'activo' : '' }}">
+                    <i class="fas fa-sliders"></i> Configuración
+                </a>
             @elseif ($rol === 'ROL009')
                 <div class="nav-titulo">Control</div>
                 <a href="{{ route('admin.auditoria') }}" class="{{ request()->routeIs('admin.auditoria*') ? 'activo' : '' }}">
@@ -422,7 +431,13 @@
                 <a href="{{ route('farmacia.lotes') }}" class="{{ request()->routeIs('farmacia.lotes*') ? 'activo' : '' }}">
                     <i class="fas fa-boxes-stacked"></i> Lotes y stock
                 </a>
+                <a href="{{ route('farmacia.ventas') }}" class="{{ request()->routeIs('farmacia.ventas*') ? 'activo' : '' }}">
+                    <i class="fas fa-cash-register"></i> Venta en mostrador
+                </a>
             @elseif ($rol === 'ROL004')
+                <a href="{{ route('enfermeria.internados') }}" class="{{ request()->routeIs('enfermeria.internados', 'enfermeria.internaciones.*') ? 'activo' : '' }}">
+                    <i class="fas fa-bed-pulse"></i> Pacientes internados
+                </a>
                 <a href="{{ route('enfermeria.dashboard') }}" class="{{ request()->routeIs('enfermeria.dashboard') ? 'activo' : '' }}">
                     <i class="fas fa-hand-holding-medical"></i> Insumos de familiares
                 </a>
@@ -452,6 +467,12 @@
                 </a>
                 <a href="{{ route('medico.dashboard') }}#agenda">
                     <i class="fas fa-calendar-alt"></i> Mi agenda
+                </a>
+                <a href="{{ route('medico.historia.buscar') }}" class="{{ request()->routeIs('medico.historia*') ? 'activo' : '' }}">
+                    <i class="fas fa-folder-open"></i> Historias clínicas
+                </a>
+                <a href="{{ route('medico.interconsultas') }}" class="{{ request()->routeIs('medico.interconsultas*') ? 'activo' : '' }}">
+                    <i class="fas fa-share-from-square"></i> Interconsultas
                 </a>
                 <a href="{{ route('medico.estadisticas') }}" class="{{ request()->routeIs('medico.estadisticas') ? 'activo' : '' }}">
                     <i class="fas fa-chart-pie"></i> Mis estadísticas
@@ -524,7 +545,7 @@
             <div class="quien">
                 @php
                     $nuevas = \Illuminate\Support\Facades\DB::table('NOTIFICACION')
-                        ->where('COD_USR', auth()->user()->COD_USR)->where('EST_NOT', 'Enviada')->count();
+                        ->where('COD_USR', auth()->user()->COD_USR)->where('CAN_NOT', 'Sistema')->where('EST_NOT', 'Enviada')->count();
                 @endphp
                 <a href="{{ route('notificaciones') }}" title="Notificaciones" class="campana">
                     <i class="fas fa-bell"></i>
@@ -533,7 +554,7 @@
                     @endif
                 </a>
                 <span class="usuario"><i class="fas {{ $iconosRol[$rol] ?? 'fa-user' }}"></i> {{ auth()->user()->USR_USR }} · {{ config('roles.' . $rol . '.nombre') }}</span>
-                <form method="POST" action="{{ route('logout') }}">
+                <form method="POST" action="{{ route('logout') }}" id="form-logout">
                     @csrf
                     <button type="submit"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</button>
                 </form>
@@ -557,6 +578,53 @@
             @yield('contenido')
         </main>
     </div>
+    <div id="aviso-inactividad" role="alert">
+        <strong><i class="fas fa-clock"></i> Tu sesión se cerrará por inactividad</strong>
+        <p style="margin: 6px 0 10px; color: var(--suave);">Quedan <span id="seg-inactividad">60</span> s. Mueve el mouse o pulsa una tecla para seguir.</p>
+    </div>
+    <script>
+    // RN06 / RNF014: cierre de sesión por inactividad del usuario (minutos configurables por el administrador)
+    (function () {
+        const limite = {{ (int) config('session.lifetime') }} * 60 * 1000, aviso = 60 * 1000;
+        const caja = document.getElementById('aviso-inactividad'), seg = document.getElementById('seg-inactividad');
+        let ultimo = Date.now();
+        ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(ev =>
+            document.addEventListener(ev, () => { ultimo = Date.now(); caja.style.display = 'none'; }, { passive: true }));
+        setInterval(() => {
+            const resta = limite - (Date.now() - ultimo);
+            if (resta <= 0) { document.getElementById('form-logout').submit(); return; }
+            if (resta <= aviso) { caja.style.display = 'block'; seg.textContent = Math.ceil(resta / 1000); }
+        }, 1000);
+    })();
+
+    // RNF008: las zonas marcadas con data-vivo se actualizan solas (camas, agenda, stock) cada pocos segundos,
+    // sin recargar la página; se pausa si el usuario está escribiendo o tiene un formulario abierto.
+    (function () {
+        const zonas = () => document.querySelectorAll('[data-vivo]');
+        if (!zonas().length) return;
+        let sucio = false;
+        document.addEventListener('input', e => { if (e.target.closest('[data-vivo]')) sucio = true; });
+        document.addEventListener('submit', () => { sucio = true; });
+        setInterval(async () => {
+            if (document.hidden || sucio) return;
+            const activo = document.activeElement;
+            const ocupado = [...zonas()].some(z => (activo && activo !== document.body && z.contains(activo)
+                && /INPUT|SELECT|TEXTAREA/.test(activo.tagName)) || z.querySelector('details[open]'));
+            if (ocupado) return;
+            try {
+                const r = await fetch(location.href, { headers: { 'X-Vivo': '1' }, credentials: 'same-origin' });
+                if (!r.ok || r.redirected) return;
+                const nuevas = new DOMParser().parseFromString(await r.text(), 'text/html').querySelectorAll('[data-vivo]');
+                zonas().forEach((z, i) => {
+                    if (nuevas[i] && nuevas[i].innerHTML !== z.innerHTML) {
+                        z.innerHTML = nuevas[i].innerHTML;
+                        z.dispatchEvent(new CustomEvent('vivo:actualizado', { bubbles: true }));
+                    }
+                });
+            } catch (e) { /* sin conexión: se reintenta en el próximo ciclo */ }
+        }, {{ (int) config('cies.refresco_segundos', 5) }} * 1000);
+    })();
+    </script>
     @stack('scripts')
 </body>
 </html>

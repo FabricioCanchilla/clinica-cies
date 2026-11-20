@@ -6,349 +6,58 @@
     <title>Clínica CIES — Portal Institucional y Acceso</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html { scroll-behavior: smooth; }
-        body {
-            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-            background: #f8fafc;
-            color: #1e293b;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* ----- PALETA DE COLORES CIES (VERDE) ----- */
-        :root {
-            --cies-green: #43704f; /* Verde principal */
-            --cies-green-dark: #3b6449; /* Verde hover */
-            --cies-green-light: #eef5f0; /* Fondo suave verde */
-            --cies-text: #0f172a;
-            --cies-text-muted: #64748b;
-        }
-
-        /* ----- BARRA SUPERIOR (HEADER) ----- */
-        .header {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-            padding: 16px 40px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .logo-container { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-        .logo-img { height: 52px; width: auto; display: block; }
-        .modal-logo { display: block; height: 46px; margin: 0 auto 14px; }
-        .footer-logo { display: inline-block; background: #fff; border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; }
-        .footer-logo img { height: 40px; display: block; }
-        .logo-badge { 
-            background: var(--cies-green); 
-            color: #ffffff; 
-            font-weight: 800; 
-            padding: 8px 12px; 
-            border-radius: 8px; 
-            font-size: 16px; 
-        }
-        .logo-title { font-size: 18px; font-weight: 700; color: #0f172a; line-height: 1.1; }
-        .logo-subtitle { font-size: 11px; color: #64748b; font-weight: 500; }
-        
-        .nav-links { display: flex; gap: 28px; list-style: none; }
-        .nav-links a { color: #475569; text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
-        .nav-links a:hover { color: var(--cies-green); }
-
-        .header-actions { display: flex; align-items: center; gap: 16px; }
-        
-        .emergency-contact { display: flex; flex-direction: column; text-align: right; }
-        .emergency-label { font-size: 11px; color: #dc2626; font-weight: 700; display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
-        .emergency-number { font-size: 14px; color: #0f172a; font-weight: 700; text-decoration: none; }
-        
-        /* Botones superiores */
-        .btn-appointment {
-            background: var(--cies-green);
-            color: #ffffff;
-            padding: 10px 18px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            text-decoration: none;
-            box-shadow: 0 4px 12px rgba(76, 125, 95, 0.25);
-            transition: background 0.2s;
-        }
-        .btn-appointment:hover { background: var(--cies-green-dark); }
-
-        .btn-login-nav {
-            background: #0f172a;
-            color: #ffffff;
-            padding: 10px 18px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-login-nav:hover { background: #334155; }
-
-        /* ----- HERO SECTION (CORREGIDO PARA LA IMAGEN) ----- */
-        .hero {
-            position: relative;
-            min-height: 85vh;
-            /* Ajuste: El gradiente va de blanco a transparente para que la imagen se vea a la derecha */
-            background: linear-gradient(90deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.9) 45%, rgba(255,255,255,0.2) 70%, rgba(255,255,255,0) 100%), 
-                url("/images/clinica-cies.png") no-repeat right center/cover;
-            display: flex;
-            align-items: center;
-            padding: 140px 40px 80px;
-        }
-
-        .hero-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        .hero-text {
-            max-width: 550px;
-        }
-
-        .hero-text h1 {
-            font-size: 56px;
-            line-height: 1.1;
-            color: #0f172a;
-            font-weight: 800;
-            margin-bottom: 20px;
-        }
-        .hero-text h1 span { color: var(--cies-green); }
-        .hero-text p {
-            font-size: 18px;
-            color: #475569;
-            line-height: 1.6;
-            margin-bottom: 32px;
-        }
-
-        .hero-buttons { display: flex; gap: 16px; align-items: center; }
-        
-        .btn-primary-action {
-            background: var(--cies-green);
-            color: white;
-            padding: 14px 28px;
-            border-radius: 10px;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 10px 20px -5px rgba(76, 125, 95, 0.4);
-            transition: transform 0.2s, background 0.2s;
-        }
-        .btn-primary-action:hover { 
-            transform: translateY(-2px); 
-            background: var(--cies-green-dark);
-        }
-
-        .btn-secondary-action {
-            background: #ffffff;
-            color: #0f172a;
-            padding: 14px 24px;
-            border-radius: 10px;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            border: 1px solid #cbd5e1;
-            transition: background 0.2s, border-color 0.2s;
-        }
-        .btn-secondary-action:hover { 
-            background: #f8fafc; 
-            border-color: var(--cies-green);
-        }
-
-        /* ----- BARRA FLOTANTE DE CARACTERÍSTICAS ----- */
-        .features-bar-container {
-            max-width: 1200px;
-            margin: -50px auto 60px;
-            padding: 0 24px;
-            position: relative;
-            z-index: 10;
-        }
-        .features-bar {
-            background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.08);
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            padding: 28px;
-            gap: 20px;
-            border: 1px solid #e2e8f0;
-        }
-        .feature-item { display: flex; gap: 16px; align-items: flex-start; }
-        .feature-icon {
-            font-size: 24px;
-            color: var(--cies-green);
-            background: var(--cies-green-light);
-            padding: 12px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .feature-texts h4 { font-size: 15px; color: #0f172a; font-weight: 700; margin-bottom: 2px; }
-        .feature-texts p { font-size: 12px; color: #64748b; line-height: 1.4; }
-
-        /* ----- SECCIONES GENERALES ----- */
-        .section { max-width: 1200px; margin: 0 auto; padding: 60px 24px; }
-        .section-title { font-size: 28px; font-weight: 800; color: #0f172a; text-align: center; margin-bottom: 8px; }
-        .section-subtitle { text-align: center; color: #64748b; font-size: 15px; margin-bottom: 40px; }
-
-        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
-        .info-card {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
-        }
-        .info-card h3 { font-size: 18px; color: #0f172a; font-weight: 700; margin-bottom: 10px; }
-        .info-card p { font-size: 14px; color: #64748b; line-height: 1.6; }
-
-        .tag { display: inline-block; font-size: 11px; font-weight: 700; color: var(--cies-green); background: var(--cies-green-light); padding: 4px 10px; border-radius: 6px; margin-bottom: 12px; text-transform: uppercase; }
-
-        /* ----- FOOTER ----- */
-        footer { background: #0f172a; color: #94a3b8; padding: 60px 24px 24px; margin-top: 60px; font-size: 14px; }
-        .footer-content { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 40px; margin-bottom: 40px; }
-        .footer-content h4 { color: white; font-size: 16px; font-weight: 700; margin-bottom: 16px; }
-        .footer-content p, .footer-content li { margin-bottom: 10px; list-style: none; }
-        .footer-content a { color: #94a3b8; text-decoration: none; }
-        .footer-content a:hover { color: #ffffff; }
-        .footer-bottom { text-align: center; border-top: 1px solid #1e293b; padding-top: 24px; font-size: 13px; color: #64748b; }
-
-        /* ----- MODALES ----- */
-        .modal { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px; }
-        .modal-box { background: white; border-radius: 20px; width: 100%; max-width: 440px; padding: 36px; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
-        .close-btn { position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b; }
-
-        .modal-box label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px; }
-        .modal-box input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 14px; font-size: 14px; background: #f8fafc; color: #0f172a; }
-        .modal-box .reg-select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 14px; font-size: 14px; background: #f8fafc; color: #0f172a; }
-        .modal-box input:focus { outline: none; border-color: var(--cies-green); background: #fff; box-shadow: 0 0 0 3px rgba(76, 125, 95, 0.15); }
-
-        .btn-submit-main {
-            width: 100%;
-            padding: 12px;
-            background: var(--cies-green);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-submit-main:hover { background: var(--cies-green-dark); }
-
-        .error-box {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            color: #991b1b;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 12px;
-            margin-bottom: 14px;
-        }
-        
-        @media(max-width: 1024px) {
-            .features-bar { grid-template-columns: repeat(2, 1fr); }
-            .nav-links { display: none; }
-        }
-        @media(max-width: 640px) {
-            .features-bar { grid-template-columns: 1fr; }
-            .hero-text h1 { font-size: 40px; }
-            .hero {
-                background: linear-gradient(90deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.9) 60%, rgba(255,255,255,0.6) 100%), 
-                url("/images/clinica-cies.png") no-repeat center center/cover;
-            }
-        }
-    </style>
+    @include('publico._estilos')
 </head>
 <body>
 
-    <!-- BARRA SUPERIOR -->
-    <header class="header">
-        <a href="#inicio" class="logo-container" title="Clínica CIES">
-            <img src="{{ asset('images/logo-cies.png') }}" alt="CIES · Salud sexual, salud reproductiva, salud integral" class="logo-img">
-        </a>
+    @include('publico._cabecera', ['portada' => true])
 
-        <ul class="nav-links">
-            <li><a href="#inicio">Inicio</a></li>
-            <li><a href="#nosotros">Nosotros</a></li>
-            <li><a href="#servicios">Servicios</a></li>
-            <li><a href="#investigacion">Investigación</a></li>
-            <li><a href="#ubicacion">Ubicación</a></li>
-            <li><a href="#contacto">Contacto</a></li>
-        </ul>
-
-        <div class="header-actions">
-            <div class="emergency-contact">
-                <span class="emergency-label"><i class="fas fa-phone-alt"></i> 24/7 Urgencias</span>
-                <a href="tel:160" class="emergency-number">+591 (2) 244-0000</a>
-            </div>
-            <button type="button" onclick="openLoginModal()" class="btn-login-nav"><i class="fas fa-user"></i> Iniciar Sesión</button>
-            <a href="#servicios" class="btn-appointment">Agendar Cita</a>
-        </div>
-    </header>
-
+    @php $c = config('clinica'); $bs = fn ($n) => 'Bs ' . number_format((float) $n, 0, ',', '.'); @endphp
     <!-- HERO PRINCIPAL -->
     <section class="hero" id="inicio">
         <div class="hero-content">
             <div class="hero-text">
-                <span class="tag">Centro Médico Certificado</span>
-                <h1>Tu Salud, <br><span>Nuestra Prioridad</span></h1>
-                <p>Atención médica humanizada y tecnología de vanguardia. Cuidamos de tu bienestar para construir un mejor mañana.</p>
-                
+                <span class="tag">Salud sexual · Salud reproductiva · Salud integral</span>
+                <h1>Tu salud, <br><span>{{ $c['lema'] }}</span></h1>
+                <p>{{ $c['sede']['nombre'] }} es parte de la red nacional de CIES: {{ $c['red_nacional']['clinicas'] }} clínicas y {{ $c['red_nacional']['policonsultorios'] }} policonsultorios en los {{ $c['red_nacional']['departamentos'] }} departamentos de Bolivia. Agenda tu consulta en línea y paga solo el anticipo.</p>
+
                 <div class="hero-buttons">
-                    <button type="button" onclick="openLoginModal()" class="btn-primary-action"><i class="fas fa-sign-in-alt"></i> Iniciar Sesión</button>
-                    <a href="#servicios" class="btn-secondary-action"><i class="fas fa-stethoscope"></i> Ver Especialidades</a>
+                    <a href="{{ route('agendar') }}" class="btn-primary-action" style="text-decoration: none;"><i class="fas fa-calendar-plus"></i> Agendar cita</a>
+                    <a href="{{ route('publico.servicios') }}" class="btn-secondary-action"><i class="fas fa-stethoscope"></i> Ver especialidades y tarifas</a>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- BARRA FLOTANTE DE CARACTERÍSTICAS -->
+    <!-- BARRA FLOTANTE: compromisos de CIES -->
     <div class="features-bar-container">
         <div class="features-bar">
             <div class="feature-item">
                 <div class="feature-icon"><i class="fas fa-user-md"></i></div>
                 <div class="feature-texts">
-                    <h4>Especialistas Expertos</h4>
-                    <p>Profesionales altamente calificados y con experiencia.</p>
+                    <h4>{{ $cifras['medicos'] }} especialistas</h4>
+                    <p>{{ $cifras['especialidades'] }} especialidades con agenda en línea.</p>
                 </div>
             </div>
             <div class="feature-item">
-                <div class="feature-icon"><i class="fas fa-heartbeat"></i></div>
+                <div class="feature-icon"><i class="fas fa-user-shield"></i></div>
                 <div class="feature-texts">
-                    <h4>Cuidado Avanzado</h4>
-                    <p>Tecnología de última generación para diagnósticos precisos.</p>
+                    <h4>Confidencialidad</h4>
+                    <p>Tu historia clínica solo la ve quien te atiende.</p>
                 </div>
             </div>
             <div class="feature-item">
                 <div class="feature-icon"><i class="fas fa-clock"></i></div>
                 <div class="feature-texts">
-                    <h4>Servicios 24/7</h4>
-                    <p>Atención continua de emergencias cuando lo necesites.</p>
+                    <h4>Emergencias 24 h</h4>
+                    <p>Clínica CIES La Paz · {{ $c['clinica_la_paz']['telefono'] }}</p>
                 </div>
             </div>
             <div class="feature-item">
-                <div class="feature-icon"><i class="fas fa-hands-helping"></i></div>
+                <div class="feature-icon"><i class="fas fa-hand-holding-dollar"></i></div>
                 <div class="feature-texts">
-                    <h4>Paciente Primero</h4>
-                    <p>Enfoque humano y compasivo centrado en tu persona.</p>
+                    <h4>Precios accesibles</h4>
+                    <p>Atención con calidad y calidez.</p>
                 </div>
             </div>
         </div>
@@ -357,126 +66,74 @@
     <!-- SECCIÓN: NOSOTROS (RF001: reseña y misión) -->
     <section class="section" id="nosotros">
         <h2 class="section-title">Quiénes Somos</h2>
-        <p class="section-subtitle">Centro de Investigación, Educación y Servicios</p>
+        <p class="section-subtitle">{{ $c['razon'] }}</p>
         <div class="cards-grid">
             <div class="info-card">
-                <span class="tag">Reseña</span>
-                <h3>Clínica CIES</h3>
-                <p>El CIES es una institución privada sin fines de lucro enfocada en el desarrollo social y la salud integral en Bolivia, con una reconocida trayectoria en salud sexual y reproductiva. Su red nacional cuenta con clínicas y policonsultorios en el país, incluida la ciudad de La Paz.</p>
+                <span class="tag">Historia</span>
+                <h3>Nacimos de los Consultorios Populares de Salud</h3>
+                <p>Un grupo de mujeres comprometidas con los derechos y la salud sexual y salud reproductiva inició CIES en La Paz, El Alto, Oruro y Potosí. Hoy la red llega a los {{ $c['red_nacional']['departamentos'] }} departamentos, con {{ $c['red_nacional']['umosas'] }} unidades móviles que recorren más de {{ $c['red_nacional']['comunidades'] }} comunidades rurales.</p>
+                <a class="ver-mas" href="{{ route('publico.nosotros') }}">Conoce nuestra historia <i class="fas fa-arrow-right"></i></a>
             </div>
             <div class="info-card">
                 <span class="tag">Misión</span>
-                <h3>Salud integral para la comunidad</h3>
-                <p>Brindar servicios de salud integral, humanizados y de calidad, con atención en consulta externa, laboratorio, farmacia e internación, coordinando de forma segura y trazable el trabajo de todo el personal en beneficio del paciente.</p>
+                <h3>Derechos y salud integral</h3>
+                <p>{{ $c['mision'] }}</p>
+                <a class="ver-mas" href="{{ route('publico.nosotros') }}">Misión, visión y valores <i class="fas fa-arrow-right"></i></a>
             </div>
         </div>
     </section>
 
     <!-- SECCIÓN: SERVICIOS Y ESPECIALIDADES (RF001) -->
-    <section class="section" id="servicios">
-        <h2 class="section-title">Servicios y Especialidades Médicas</h2>
-        <p class="section-subtitle">Catálogo para orientar tu atención y agendamiento de citas</p>
-
-        <div class="cards-grid">
-            <div class="info-card">
-                <h3>Medicina General e Integral</h3>
-                <p>Valoración primaria, control preventivo de salud y seguimiento médico oportuno para toda la familia.</p>
-            </div>
-            <div class="info-card">
-                <h3>Salud Sexual y Reproductiva</h3>
-                <p>Orientación especializada, ginecología, urología y planificación con absoluta confidencialidad.</p>
-            </div>
-            <div class="info-card">
-                <h3>Laboratorio e Imagenología</h3>
-                <p>Análisis clínicos rápidos, ecografías y pruebas especializadas con máxima confiabilidad.</p>
-            </div>
+    <section class="section" id="servicios" style="padding-top: 20px;">
+        <h2 class="section-title">Especialidades en {{ $c['sede']['nombre'] }}</h2>
+        <p class="section-subtitle">Precio de la consulta y número de especialistas. Agenda en línea con un anticipo del {{ (int) config('cies.anticipo_porcentaje') }} %.</p>
+        <div class="rejilla">
+            @foreach ($especialidades as $e)
+                <div class="esp" style="padding: 16px;">
+                    <div class="esp-cab">
+                        <h3 style="font-size: 15px;">{{ $e->DES_ESP }}</h3>
+                        @if ($e->PRECIO)<span class="precio">{{ $bs($e->PRECIO) }}</span>@endif
+                    </div>
+                    <small style="color: #64748b;"><i class="fas fa-user-doctor"></i> {{ $e->MEDICOS->count() }} {{ $e->MEDICOS->count() === 1 ? 'especialista' : 'especialistas' }}
+                        @if ($e->MEDICOS->isNotEmpty()) · {{ $e->MEDICOS->map(fn ($m) => $m->TIT_EMP . ' ' . $m->APE_EMP)->implode(', ') }} @endif</small>
+                </div>
+            @endforeach
         </div>
-
-        @if (!empty($especialidades) && count($especialidades))
-            <h3 style="text-align:center; margin: 32px 0 14px; font-size: 18px; color:#0f172a;">Especialidades disponibles para agendar</h3>
-            <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
-                @foreach ($especialidades as $esp)
-                    <span class="tag" style="font-size:13px; padding:8px 14px;">{{ $esp->DES_ESP }}</span>
-                @endforeach
-            </div>
-        @endif
+        <p style="text-align: center;"><a class="ver-mas" href="{{ route('publico.servicios') }}">Ver médicos, horarios, laboratorio e imagenología <i class="fas fa-arrow-right"></i></a></p>
     </section>
 
     <!-- SECCIÓN: INVESTIGACIÓN E IMPACTO SOCIAL -->
     <section class="section" id="investigacion" style="background: #f1f5f9; max-width: 100%; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
         <div style="max-width: 1200px; margin: 0 auto;">
+            <h2 class="section-title">Investigación e impacto social</h2>
+            <p class="section-subtitle">{{ count($c['proyectos']) }} proyectos vigentes con instituciones aliadas</p>
             <div class="cards-grid">
-                <div class="info-card" style="background: white;">
-                    <span class="tag">Unidad Científica</span>
-                    <h3>Investigación Clínica</h3>
-                    <p>Desarrollamos proyectos de investigación médica y estudios epidemiológicos enfocados en elevar la calidad asistencial y los protocolos de salud pública.</p>
-                </div>
-                <div class="info-card" id="impacto" style="background: white;">
-                    <span class="tag" style="background: rgba(76, 125, 95, 0.1); color: #43704f;">Impacto Social</span>
-                    <h3>Programas y Atención Solidaria</h3>
-                    <p>Llevamos brigadas móviles y campañas de salud preventiva gratuita a comunidades y sectores vulnerables de la población.</p>
-                </div>
+                @foreach (array_slice($c['proyectos'], 0, 3) as [$inst, $proy, $ubi, $pub])
+                    <div class="info-card" style="background: white;">
+                        <span class="tag">{{ $inst }}</span>
+                        <h3>{{ $proy }}</h3>
+                        <p><i class="fas fa-location-dot" style="color: #cc783c;"></i> {{ $ubi }}<br><i class="fas fa-users" style="color: var(--cies-green);"></i> {{ $pub }}</p>
+                    </div>
+                @endforeach
             </div>
+            <p style="text-align: center;"><a class="ver-mas" href="{{ route('publico.investigacion') }}">Ver todos los proyectos y el perfil de atención <i class="fas fa-arrow-right"></i></a></p>
         </div>
     </section>
 
-    <!-- SECCIÓN: UBICACIÓN (RF002 / RF004: mapa interactivo sin iniciar sesión) -->
+    <!-- SECCIÓN: UBICACIÓN (RF002 / RF004: mapa sin iniciar sesión) -->
     <section class="section" id="ubicacion">
-        <h2 class="section-title">Ubicación y Contacto</h2>
-        <p class="section-subtitle">Encuéntranos en La Paz. Ante una emergencia llama al 160.</p>
+        <h2 class="section-title">Ubicación y contacto</h2>
+        <p class="section-subtitle">{{ $c['sede']['direccion'] }} · Tel. {{ $c['sede']['telefono'] }} · Cel. {{ $c['sede']['celular'] }}</p>
         <div style="border-radius:16px; overflow:hidden; border:1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,.06);">
-            <iframe title="Mapa de la Clínica CIES" loading="lazy" style="width:100%; height:360px; border:0; display:block;"
-                src="https://www.openstreetmap.org/export/embed.html?bbox=-68.1500%2C-16.5200%2C-68.1050%2C-16.4850&amp;layer=mapnik&amp;marker=-16.5000%2C-68.1300"></iframe>
+            <iframe title="Mapa de {{ $c['sede']['nombre'] }}" loading="lazy" style="width:100%; height:360px; border:0; display:block;"
+                src="{{ $c['sede']['mapa'] }}" referrerpolicy="no-referrer-when-downgrade"></iframe>
         </div>
         <p style="text-align:center; margin-top:10px; font-size:13px;">
-            <a href="https://www.openstreetmap.org/?mlat=-16.5000&amp;mlon=-68.1300#map=16/-16.5000/-68.1300" target="_blank" rel="noopener" style="color: var(--cies-green); font-weight:600;">Abrir el mapa en pantalla completa</a>
+            <a href="{{ route('publico.ubicacion') }}" style="color: var(--cies-green); font-weight:600;">Ver los {{ count($c['red_la_paz']) }} puntos de atención de la red en La Paz y El Alto</a>
         </p>
     </section>
 
-    <!-- RF002: botón de emergencia siempre visible -->
-    <div style="position:fixed; right:18px; bottom:18px; z-index:150; display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
-        <a href="tel:160" style="background:#dc2626; color:#fff; padding:12px 18px; border-radius:999px; font-weight:700; font-size:14px; text-decoration:none; box-shadow:0 8px 20px rgba(220,38,38,.35);">
-            <i class="fas fa-ambulance"></i> Emergencia: llamar 160
-        </a>
-        <a href="#ubicacion" style="background:#fff; color:#dc2626; border:1px solid #fecaca; padding:8px 14px; border-radius:999px; font-weight:600; font-size:12px; text-decoration:none;">
-            <i class="fas fa-map-marker-alt"></i> Cómo llegar
-        </a>
-    </div>
-
-    <!-- FOOTER -->
-    <footer id="contacto">
-        <div class="footer-content">
-            <div>
-                <div class="footer-logo"><img src="{{ asset('images/logo-cies.png') }}" alt="Clínica CIES"></div>
-                <h4>Clínica CIES - Sedes</h4>
-                <p>Sede Central: Av. Principal #123</p>
-                <p>Sucursal Norte: Av. Las Américas #45</p>
-                <p><a href="#ubicacion" style="color: var(--cies-green);">📍 Ver mapa y sucursales</a></p>
-            </div>
-            <div>
-                <h4>Horarios de Atención</h4>
-                <p>Lunes a Viernes: 07:30 - 20:00</p>
-                <p>Sábados: 08:00 - 14:00</p>
-                <p style="color: #f87171; font-weight: 600;">Emergencias: 24 Horas</p>
-            </div>
-            <div>
-                <h4>Teléfonos de Contacto</h4>
-                <p>Central: +591 (2) 244-0000</p>
-                <p>Urgencias: 160</p>
-                <p>Correo: contacto@cies.org.bo</p>
-            </div>
-            <div>
-                <h4>Aviso de Privacidad</h4>
-                <ul>
-                    <li><a href="#" onclick="openPrivacyModal(); return false;">Tratamiento de Datos de Salud Sensibles</a></li>
-                    <li><a href="#" onclick="openPrivacyModal(); return false;">Términos y Condiciones de Uso</a></li>
-                </ul>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            &copy; {{ date('Y') }} Clínica CIES. Todos los derechos reservados.
-        </div>
-    </footer>
+    @include('publico._pie')
 
     <!-- MODAL DE INICIO DE SESIÓN -->
     <div class="modal" id="loginModal">
@@ -486,6 +143,9 @@
             <h2 style="font-size: 22px; color: #0f172a; margin-bottom: 4px; font-weight: 700;">Iniciar Sesión</h2>
             <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Accede a tus citas e historial médico institucional</p>
 
+            @if (request('acceso') === 'agendar')
+                <div class="aviso-acceso"><i class="fas fa-calendar-plus"></i> Para agendar tu cita inicia sesión con tu cuenta de paciente. ¿Primera vez? Crea tu cuenta con tu CI y te llevamos directo al formulario de la cita.</div>
+            @endif
             @if (session('ok'))
                 <div class="error-box" style="background: #eef5f0; color: #3b6449; border-color: #c9ddd0;">{{ session('ok') }}</div>
             @endif
@@ -622,6 +282,11 @@
         }
 
         // Si el servidor devolvió errores o un aviso, se reabre el modal que corresponde
+        @if (request('acceso'))
+            openLoginModal();
+        @elseif (request('privacidad'))
+            openPrivacyModal();
+        @endif
         @if ($errors->getBag('registro')->any())
             openRegisterModal();
         @elseif ($errors->any() || session('ok'))

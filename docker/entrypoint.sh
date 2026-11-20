@@ -42,5 +42,23 @@ if [ "$ESTADO" = "vacia" ]; then
   php artisan db:seed --force
 fi
 
+# Esquema v6 (05_ajustes_v6.sql): si la base es de una versión anterior, avisar; si faltan los catálogos, cargarlos
+V6=$(php -r '
+  try {
+    $pdo = new PDO("mysql:host=" . getenv("DB_HOST") . ";port=" . getenv("DB_PORT") . ";dbname=" . getenv("DB_DATABASE"), getenv("DB_USERNAME"), getenv("DB_PASSWORD"));
+    echo $pdo->query("SHOW TABLES LIKE \"parametro\"")->fetchColumn() ? "si" : "no";
+  } catch (Throwable $e) { echo "no"; }
+' 2>/dev/null)
+if [ "$V6" = "si" ]; then
+  php artisan db:seed --class=CatalogosV6Seeder --force >/dev/null 2>&1 || true
+  php artisan db:seed --class=DemostracionV6Seeder --force >/dev/null 2>&1 || true
+else
+  echo "!! La base es de una versión anterior (falta el esquema v6). Recréala: docker compose down -v && docker compose up --build -d"
+fi
+
+# Tareas programadas: liberación de citas (cada minuto), recordatorios y respaldos (RN20, RF015, RN48)
+echo ">> Iniciando el programador de tareas (schedule:work)"
+php artisan schedule:work > storage/logs/scheduler.log 2>&1 &
+
 echo ">> Listo. Abre http://localhost:8000"
 exec php artisan serve --host=0.0.0.0 --port=8000 --no-reload

@@ -88,7 +88,7 @@ class DashboardController extends Controller
                 ->where('ci.COD_PAC', $paciente->COD_PAC)
                 ->where('r.EST_RES', 'Publicado')
                 ->orderByDesc('r.FEC_RES')
-                ->get(['r.COD_RES', 'r.FEC_RES', 'r.DES_RES', 'r.CRI_RES', 'o.COD_ORD', 's.NOM_SRV']);
+                ->get(['r.COD_RES', 'r.FEC_RES', 'r.DES_RES', 'r.CRI_RES', 'r.ARC_RES', 'o.COD_ORD', 's.NOM_SRV']);
 
             $pagos = DB::table('PAGO as p')
                 ->join('CITA as ci', 'ci.COD_CIT', '=', 'p.COD_CIT')

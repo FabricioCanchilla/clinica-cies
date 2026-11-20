@@ -20,6 +20,17 @@ use App\Http\Controllers\Enfermeria\InsumoController;
 
 Route::get('/', fn () => redirect()->route('panel'));
 
+// Portal público (RF001, RF002, RF004): páginas institucionales y acceso a «Agendar cita»
+Route::prefix('clinica')->name('publico.')->group(function () {
+    $pc = \App\Http\Controllers\PublicoController::class;
+    Route::get('/nosotros', [$pc, 'nosotros'])->name('nosotros');
+    Route::get('/servicios', [$pc, 'servicios'])->name('servicios');
+    Route::get('/investigacion', [$pc, 'investigacion'])->name('investigacion');
+    Route::get('/ubicacion', [$pc, 'ubicacion'])->name('ubicacion');
+    Route::get('/contacto', [$pc, 'contacto'])->name('contacto');
+});
+Route::get('/agendar-cita', [\App\Http\Controllers\PublicoController::class, 'agendar'])->name('agendar');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login'])->name('login.post');
@@ -64,7 +75,7 @@ Route::middleware('auth')->group(function () {
             'ROL001' => 'admin.dashboard',
             'ROL002' => 'recepcion.dashboard',
             'ROL003' => 'medico.dashboard',
-            'ROL004' => 'enfermeria.dashboard',
+            'ROL004' => 'enfermeria.internados',
             'ROL005' => 'caja.dashboard',
             'ROL006' => 'paciente.dashboard',
             'ROL007' => 'laboratorio.dashboard',
@@ -112,6 +123,18 @@ Route::middleware('auth')->group(function () {
         // Reportes de atención con gráficos (por día, semana, mes, año, especialidad y médico)
         Route::get('/reportes', [\App\Http\Controllers\Admin\ReporteController::class, 'index'])->name('reportes');
         Route::get('/reportes/excel', [\App\Http\Controllers\Admin\ReporteController::class, 'excel'])->name('reportes.excel');
+
+        // RF043 / RF044: configuración general, permisos por rol y respaldos (RN48)
+        $cf = \App\Http\Controllers\Admin\ConfiguracionController::class;
+        Route::get('/configuracion', [$cf, 'index'])->name('configuracion');
+        Route::post('/configuracion/parametros', [$cf, 'parametros'])->name('configuracion.parametros');
+        Route::post('/configuracion/especialidades', [$cf, 'especialidad'])->name('configuracion.especialidad');
+        Route::post('/configuracion/servicios', [$cf, 'servicio'])->name('configuracion.servicio');
+        Route::post('/configuracion/medicamentos', [$cf, 'medicamento'])->name('configuracion.medicamento');
+        Route::post('/configuracion/permisos', [$cf, 'permisos'])->name('configuracion.permisos');
+        Route::post('/configuracion/respaldos', [$cf, 'crearRespaldo'])->name('configuracion.respaldos.crear');
+        Route::post('/configuracion/respaldos/{codRes}/probar', [$cf, 'probarRespaldo'])->name('configuracion.respaldos.probar');
+        Route::get('/configuracion/respaldos/{codRes}/descargar', [$cf, 'descargarRespaldo'])->name('configuracion.respaldos.descargar');
 }); // Cierre del grupo administrativo
 
     // 3. Panel de Médico
@@ -122,6 +145,22 @@ Route::middleware('auth')->group(function () {
         Route::post('/citas/{codCit}/atender', [\App\Http\Controllers\Medico\AtencionController::class, 'guardar'])->name('atender.guardar');
         // Estadísticas del médico: sus pacientes y la especialidad más frecuentada por mes
         Route::get('/estadisticas', [\App\Http\Controllers\Medico\EstadisticaController::class, 'index'])->name('estadisticas');
+
+        // RF022: buscador CIE-10 · RF017 historia completa · RN41 adendas · RF023 derivaciones · RF024 consentimiento
+        $hc = \App\Http\Controllers\Medico\HistoriaController::class;
+        Route::get('/cie10', [$hc, 'cie10'])->name('cie10');
+        Route::get('/historias', [$hc, 'buscar'])->name('historia.buscar');
+        Route::get('/historias/{codPac}', [$hc, 'show'])->name('historia');
+        Route::post('/historias/{codPac}/emergencia', [$hc, 'emergencia'])->name('historia.emergencia');
+        Route::post('/historias/{codPac}/antecedentes', [$hc, 'antecedente'])->name('historia.antecedente');
+        Route::post('/historias/{codPac}/alergias', [$hc, 'alergia'])->name('historia.alergia');
+        Route::post('/historias/{codPac}/derivaciones', [$hc, 'derivar'])->name('historia.derivar');
+        Route::post('/consultas/{codCns}/adendas', [$hc, 'adenda'])->name('historia.adenda');
+        Route::get('/historias/{codPac}/consentimiento', [$hc, 'consentimientoForm'])->name('historia.consentimiento');
+        Route::post('/historias/{codPac}/consentimiento', [$hc, 'consentimientoGuardar'])->name('historia.consentimiento.guardar');
+        Route::get('/consentimientos/{codCnt}/firma', [$hc, 'consentimientoFirma'])->name('historia.firma');
+        Route::get('/interconsultas', [$hc, 'interconsultas'])->name('interconsultas');
+        Route::post('/interconsultas/{codDer}/responder', [$hc, 'responder'])->name('interconsultas.responder');
     });
     // Panel de Laboratorio (ROL007)
     Route::middleware('rol:ROL007')->prefix('laboratorio')->name('laboratorio.')->group(function () {
@@ -143,6 +182,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/lotes', [FarmLoteController::class, 'entrada'])->name('lotes.entrada');
         Route::get('/lotes/{codLot}/baja', [FarmLoteController::class, 'formBaja'])->name('lotes.baja');
         Route::post('/lotes/{codLot}/baja', [FarmLoteController::class, 'guardarBaja'])->name('lotes.baja.guardar');
+
+        // RF041: venta en mostrador y consumo de hospitalizados
+        $vc = \App\Http\Controllers\Farmacia\VentaController::class;
+        Route::get('/ventas', [$vc, 'index'])->name('ventas');
+        Route::post('/ventas', [$vc, 'store'])->name('ventas.guardar');
+        Route::post('/ventas/{nro}/anular', [$vc, 'anular'])->name('ventas.anular');
+        Route::get('/ventas/{nro}/pdf', [$vc, 'pdf'])->name('ventas.pdf');
     });
 
     // Panel del paciente (ROL006): sus datos, sus citas, agendamiento y pago con OTP
@@ -202,6 +248,17 @@ Route::middleware('auth')->group(function () {
         Route::post('/internaciones/{codInt}/alta', [$cc, 'alta'])->name('internaciones.alta');
         Route::post('/limpiezas/{codLim}/iniciar', [$cc, 'iniciar'])->name('limpiezas.iniciar');
         Route::post('/limpiezas/{codLim}/completar', [$cc, 'completar'])->name('limpiezas.completar');
+
+        // RF030 signos vitales · RF033/RF034 dosis con 5 correctos e incidencias · RF035 notas, balance y turno
+        $ic = \App\Http\Controllers\Enfermeria\InternacionController::class;
+        Route::get('/internados', [$ic, 'index'])->name('internados');
+        Route::get('/internaciones/{codInt}', [$ic, 'show'])->name('internaciones.show');
+        Route::post('/internaciones/{codInt}/signos', [$ic, 'signos'])->name('internaciones.signos');
+        Route::post('/internaciones/{codInt}/dosis', [$ic, 'programar'])->name('internaciones.programar');
+        Route::post('/internaciones/{codInt}/notas', [$ic, 'nota'])->name('internaciones.nota');
+        Route::post('/internaciones/{codInt}/balance', [$ic, 'balance'])->name('internaciones.balance');
+        Route::post('/dosis/{codDos}/administrar', [$ic, 'administrar'])->name('dosis.administrar');
+        Route::post('/dosis/{codDos}/omitir', [$ic, 'omitir'])->name('dosis.omitir');
     });
 
     // Panel de Caja (ROL005), RF039: apertura, cobros, anulación y cierre
@@ -254,6 +311,11 @@ Route::get('/admin/auditoria/pdf', [\App\Http\Controllers\Admin\AuditoriaControl
         Route::get('/pacientes/{codPac}', [$rp, 'show'])->name('paciente');
         Route::get('/pacientes/{codPac}/pdf', [$rp, 'pdf'])->name('paciente.pdf');
     });
+
+    // RF027: archivo adjunto del resultado (laboratorio siempre; médico y paciente solo publicados y con relación)
+    Route::middleware('rol:ROL003,ROL006,ROL007')
+        ->get('/resultados/{codRes}/archivo', [\App\Http\Controllers\Comun\ResultadoArchivoController::class, 'show'])
+        ->name('resultados.archivo');
 
     // Orden de pago de una cita: la emiten recepción y administración; caja y el paciente la consultan
     Route::middleware('rol:ROL001,ROL002,ROL005,ROL006')->prefix('ordenes-pago')->name('ordenes.')->group(function () {

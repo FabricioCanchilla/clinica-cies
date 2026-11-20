@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use App\Http\Middleware\VerificarActivo;
 use App\Http\Middleware\ForzarCambioClave;
+use App\Http\Middleware\VerificarPermiso;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
                 $middleware->appendToGroup('web', VerificarActivo::class);
         $middleware->appendToGroup('web', ForzarCambioClave::class);
+        // RF043 / RNF001: permisos por módulo (ROL_PERMISO)
+        $middleware->appendToGroup('web', VerificarPermiso::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

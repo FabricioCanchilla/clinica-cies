@@ -42,7 +42,7 @@ class SupervisionController extends Controller
             'citas'     => $citas,
             'porEstado' => $porEstado,
             'medicos'   => DB::table('EMPLEADO')->whereNotNull('COD_ESP')->orderBy('APE_EMP')->get(['COD_EMP', 'TIT_EMP', 'NOM_EMP', 'APE_EMP']),
-            'estados'   => ['Pendiente de pago', 'Confirmada', 'Atendida', 'Cancelada', 'Expirada', 'No asistio'],
+            'estados'   => ['Pendiente de pago', 'Confirmada', 'En espera', 'En consulta', 'Atendida', 'Cancelada', 'Expirada', 'No asistio'],
             'filtro'    => compact('desde', 'hasta', 'estado', 'medico'),
         ]);
     }

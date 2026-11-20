@@ -25,6 +25,10 @@
     .tarea.Terminal { background: #fef2f2; border-color: #fecaca; }
     .tarea label { display: flex; gap: 8px; align-items: flex-start; margin: 5px 0; font-size: 13px; }
     .tag-ais { display: inline-block; background: #e11d48; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+    .cama select.lista-pacientes, .cama select.lista-medicos { height: auto; }
+    .cama select.lista-pacientes option, .cama select.lista-medicos option { padding: 4px 6px; }
+    .cama select.lista-pacientes optgroup, .cama select.lista-medicos optgroup { font-size: 12px; color: var(--cies-dark); }
+    .cama .sin-resultados { display: block; margin: -4px 0 8px; color: #b91c1c; }
     .reglas li { margin: 4px 0 4px 18px; font-size: 13px; color: var(--texto); }
 </style>
 @endpush
@@ -33,7 +37,7 @@
     <h1>Camas e internación</h1>
     <p class="sub">Una cama solo se asigna si está disponible y limpia. Tras cada alta, o si la ropa de cama está sucia, la cama sale de servicio hasta completar su limpieza.</p>
 
-    <div class="grid">
+    <div class="grid" data-vivo>
         @foreach (['Disponible' => '#3b6449', 'Ocupada' => '#b91c1c', 'Limpieza' => '#92400e'] as $est => $color)
             <div class="card"><div class="num" style="color: {{ $color }};">{{ $porEstado[$est] ?? 0 }}</div><div class="lbl">Camas «{{ $est }}»</div></div>
         @endforeach
@@ -50,7 +54,7 @@
         </ul>
     </details>
 
-    <div class="camas">
+    <div class="camas" data-vivo>
         @foreach ($camas as $c)
             <div class="cama {{ $c->EST_CAM }} {{ !empty($c->AIS_INT) ? 'aislada' : '' }}">
                 <div class="cab">
@@ -61,7 +65,7 @@
 
                 @if ($c->COD_INT)
                     <p>
-                        <strong>{{ $c->NOM_PAC }} {{ $c->APE_PAC }}</strong> <small>CI {{ $c->CI_PAC }}</small><br>
+                        <a href="{{ route('enfermeria.internaciones.show', $c->COD_INT) }}" title="Signos, dosis, notas y balance"><strong>{{ $c->NOM_PAC }} {{ $c->APE_PAC }}</strong></a> <small>CI {{ $c->CI_PAC }}</small><br>
                         <small>Desde {{ \Carbon\Carbon::parse($c->FECING_INT)->format('d/m/Y H:i') }} · {{ $c->TIT_EMP }} {{ $c->APE_EMP }}</small><br>
                         {{ $c->MOT_INT }}
                     </p>
@@ -114,18 +118,34 @@
                         <summary><i class="fas fa-user-plus"></i> Internar paciente</summary>
                         <form method="POST" action="{{ route('enfermeria.camas.internar', $c->COD_CAM) }}">
                             @csrf
-                            <select name="paciente" required>
-                                <option value="">Paciente…</option>
-                                @foreach ($pacientes as $p)
-                                    <option value="{{ $p->COD_PAC }}">{{ $p->APE_PAC }}, {{ $p->NOM_PAC }} · CI {{ $p->CI_PAC }}</option>
+                            <input type="text" class="buscar-paciente" placeholder="Buscar paciente por nombre, apellido o CI" autocomplete="off">
+                            <select name="paciente" class="lista-pacientes" size="6" required>
+                                @php $conCita = $pacientes->where('CITA_HOY', true); $resto = $pacientes->where('CITA_HOY', false); @endphp
+                                @if ($conCita->isNotEmpty())
+                                    <optgroup label="Con cita hoy">
+                                        @foreach ($conCita as $p)
+                                            <option value="{{ $p->COD_PAC }}" data-medico="{{ $p->MED_HOY }}" data-motivo="{{ $p->MOT_HOY }}">{{ $p->HOR_HOY }} · {{ $p->APE_PAC }}, {{ $p->NOM_PAC }} · CI {{ $p->CI_PAC }}</option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                <optgroup label="Todos los pacientes">
+                                    @foreach ($resto as $p)
+                                        <option value="{{ $p->COD_PAC }}">{{ $p->APE_PAC }}, {{ $p->NOM_PAC }} · CI {{ $p->CI_PAC }}</option>
+                                    @endforeach
+                                </optgroup>
+                            </select>
+                            <small class="sin-resultados sin-pacientes" hidden>No hay pacientes con ese nombre o CI.</small>
+                            <input type="text" class="buscar-medico" placeholder="Buscar médico tratante por nombre o especialidad" autocomplete="off">
+                            <select name="medico" class="lista-medicos" size="6" required>
+                                @foreach ($medicos->groupBy('DES_ESP') as $esp => $grupo)
+                                    <optgroup label="{{ $esp }}">
+                                        @foreach ($grupo as $m)
+                                            <option value="{{ $m->COD_EMP }}">{{ $m->TIT_EMP }} {{ $m->NOM_EMP }} {{ $m->APE_EMP }} · {{ $m->DES_ESP }}</option>
+                                        @endforeach
+                                    </optgroup>
                                 @endforeach
                             </select>
-                            <select name="medico" required>
-                                <option value="">Médico tratante…</option>
-                                @foreach ($medicos as $m)
-                                    <option value="{{ $m->COD_EMP }}">{{ $m->TIT_EMP }} {{ $m->NOM_EMP }} {{ $m->APE_EMP }} · {{ $m->DES_ESP }}</option>
-                                @endforeach
-                            </select>
+                            <small class="sin-resultados sin-medicos" hidden>No hay médicos con ese nombre o especialidad.</small>
                             <input type="text" name="motivo" maxlength="200" placeholder="Motivo de la internación" required>
                             <select name="aislamiento">
                                 <option value="">Sin aislamiento</option>
@@ -191,4 +211,66 @@
             </tbody>
         </table>
     </div>
+
+    @php $panel = app(\App\Services\IndicadoresRolService::class)->camas(); @endphp
+    <h2 style="margin-top: 28px;"><i class="fas fa-chart-column"></i> Indicadores de camas e internación</h2>
+    @include('partials.panel-graficos', ['panel' => $panel])
 @endsection
+
+@push('scripts')
+<script>
+// Buscadores del formulario de internación: filtran por nombre, apellido, CI o especialidad
+// (sin importar tildes ni el orden de las palabras). Si el paciente tiene cita hoy,
+// se propone su médico y el motivo de la cita.
+function iniciarBuscadoresCamas() {
+    const norm = t => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+    function filtrar(lista, aviso, texto) {
+        const palabras = norm(texto).split(/\s+/).filter(Boolean);
+        let visibles = 0, primera = null;
+        lista.querySelectorAll('option').forEach(function (o) {
+            const grupo = o.parentElement.tagName === 'OPTGROUP' ? o.parentElement.label : '';
+            const ok = palabras.every(p => norm(o.textContent + ' ' + grupo).includes(p));
+            o.hidden = !ok;
+            if (ok) { visibles++; primera = primera || o; }
+        });
+        lista.querySelectorAll('optgroup').forEach(g => g.hidden = !g.querySelector('option:not([hidden])'));
+        aviso.hidden = visibles > 0;
+        if (lista.selectedOptions[0] && lista.selectedOptions[0].hidden) lista.value = '';
+        if (visibles === 1) { lista.value = primera.value; lista.dispatchEvent(new Event('change')); }
+    }
+
+    function conectar(form, claseInput, claseLista, claseAviso) {
+        const input = form.querySelector(claseInput);
+        const lista = form.querySelector(claseLista);
+        const aviso = form.querySelector(claseAviso);
+        if (!input || !lista) return null;
+        input.addEventListener('input', () => filtrar(lista, aviso, input.value));
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowDown') { e.preventDefault(); lista.focus(); }
+            if (e.key === 'Enter') { e.preventDefault(); }
+        });
+        return { input, lista, aviso };
+    }
+
+    document.querySelectorAll('form').forEach(function (form) {
+        const pac = conectar(form, '.buscar-paciente', '.lista-pacientes', '.sin-pacientes');
+        const med = conectar(form, '.buscar-medico', '.lista-medicos', '.sin-medicos');
+        if (!pac) return;
+        pac.lista.addEventListener('change', function () {
+            const o = pac.lista.selectedOptions[0];
+            if (!o) return;
+            const motivo = form.querySelector('input[name=motivo]');
+            if (o.dataset.medico && med) {
+                med.input.value = '';
+                filtrar(med.lista, med.aviso, '');
+                med.lista.value = o.dataset.medico;
+            }
+            if (o.dataset.motivo && motivo && !motivo.value) motivo.value = o.dataset.motivo;
+        });
+    });
+}
+iniciarBuscadoresCamas();
+document.addEventListener('vivo:actualizado', iniciarBuscadoresCamas);
+</script>
+@endpush

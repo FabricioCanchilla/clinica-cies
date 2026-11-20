@@ -70,7 +70,7 @@ class OrdenPagoController extends Controller
             $o->EST_CIT === 'Pendiente de pago' => 'Pendiente: pagar el anticipo para confirmar la cita',
             default => 'Pendiente de pago en caja',
         };
-        $o->COBRABLE = $o->SALDO > 0 && in_array($o->EST_CIT, ['Confirmada', 'Atendida'], true);
+        $o->COBRABLE = $o->SALDO > 0 && in_array($o->EST_CIT, ['Confirmada', 'En espera', 'En consulta', 'Atendida'], true);
         return $o;
     }
 }

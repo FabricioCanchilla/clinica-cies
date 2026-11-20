@@ -149,4 +149,8 @@
             </form>
         </div>
     @endif
+
+    @php $panel = app(\App\Services\IndicadoresRolService::class)->caja(); @endphp
+    <h2 style="margin-top: 8px;"><i class="fas fa-chart-column"></i> Indicadores</h2>
+    @include('partials.panel-graficos', ['panel' => $panel])
 @endsection

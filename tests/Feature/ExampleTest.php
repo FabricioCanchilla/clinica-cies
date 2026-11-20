@@ -10,10 +10,11 @@ class ExampleTest extends TestCase
     /**
      * A basic test example.
      */
-    public function test_the_application_returns_a_successful_response(): void
+    public function test_la_raiz_redirige_al_panel(): void
     {
         $response = $this->get('/');
 
-        $response->assertStatus(200);
+        // La raíz lleva al panel según el rol (sin sesión, termina en el login)
+        $response->assertRedirect(route('panel'));
     }
 }

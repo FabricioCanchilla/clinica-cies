@@ -14,6 +14,8 @@ class DatabaseSeeder extends Seeder
             DatosClinicosPruebaSeeder::class,
             HistorialInternacionSeeder::class,   // RF050: sala, camas e historial de internaciones de demostración
             DemostracionClinicaSeeder::class,    // especialidades, 17 médicos, pacientes e historial de citas para los reportes
+            CatalogosV6Seeder::class,            // CIE-10, medicamentos con precio, permisos por rol (esquema v6)
+            DemostracionV6Seeder::class,         // exámenes, recetas, ventas y cuidados de enfermería para los paneles
         ]);
     }
 }

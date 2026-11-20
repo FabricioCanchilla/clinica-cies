@@ -21,10 +21,19 @@
 
             <form method="POST" action="{{ route('medico.atender.guardar', $cita->COD_CIT) }}" class="space-y-4">
                 @csrf
-                <div>
-                    <label class="block text-sm font-semibold mb-1" for="diagnostico">Diagnóstico</label>
-                    <input id="diagnostico" name="diagnostico" maxlength="200" required value="{{ old('diagnostico') }}"
-                           class="w-full border border-slate-300 rounded-lg px-3 py-2" placeholder="Diagnóstico resumido">
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1" for="cie">Código CIE-10 <span class="text-red-600">*</span></label>
+                        <input id="cie" name="cie" list="cie-lista" required autocomplete="off" value="{{ old('cie') }}"
+                               class="w-full border border-slate-300 rounded-lg px-3 py-2 font-mono" placeholder="Busca: J06, gastritis…">
+                        <datalist id="cie-lista"></datalist>
+                        <p id="cie-desc" class="text-xs text-slate-500 mt-1">RN43: la consulta no se cierra sin un diagnóstico CIE-10.</p>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm font-semibold mb-1" for="diagnostico">Diagnóstico</label>
+                        <input id="diagnostico" name="diagnostico" maxlength="200" required value="{{ old('diagnostico') }}"
+                               class="w-full border border-slate-300 rounded-lg px-3 py-2" placeholder="Se completa con el CIE-10; puedes precisarlo">
+                    </div>
                 </div>
                 <div>
                     <label class="block text-sm font-semibold mb-1" for="plan">Plan de tratamiento</label>
@@ -116,6 +125,26 @@
                     </div>
                 </div>
 
+                <div class="border-t border-slate-200 pt-4">
+                    <h2 class="font-bold text-slate-800 mb-2"><i class="fas fa-share-from-square text-emerald-600"></i> Derivación o interconsulta (RF023, opcional)</h2>
+                    <div class="grid grid-cols-3 gap-3 mb-2">
+                        <select name="deriv_esp" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="">Especialidad destino…</option>
+                            @foreach ($especialidades as $e)
+                                <option value="{{ $e->COD_ESP }}" @selected(old('deriv_esp') === $e->COD_ESP)>{{ $e->DES_ESP }}</option>
+                            @endforeach
+                        </select>
+                        <select name="deriv_tipo" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                            <option>Interconsulta</option><option @selected(old('deriv_tipo') === 'Derivación')>Derivación</option>
+                        </select>
+                        <select name="deriv_prioridad" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                            <option>Normal</option><option @selected(old('deriv_prioridad') === 'Urgente')>Urgente</option>
+                        </select>
+                    </div>
+                    <input name="deriv_motivo" maxlength="300" value="{{ old('deriv_motivo') }}" placeholder="Motivo y pregunta clínica para el especialista"
+                           class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                </div>
+
                 <div class="flex gap-3">
                     <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-lg">
                         <i class="fas fa-check"></i> Guardar y marcar como atendida
@@ -126,6 +155,26 @@
         </section>
 
         <div class="bg-white rounded-2xl border border-slate-200 p-6 self-start">
+            <a href="{{ route('medico.historia', $cita->COD_PAC) }}" class="block text-center bg-emerald-50 text-emerald-800 font-semibold text-sm rounded-lg px-3 py-2 mb-2">
+                <i class="fas fa-folder-open"></i> Abrir historia clínica completa
+            </a>
+            <a href="{{ route('medico.historia.consentimiento', $cita->COD_PAC) }}" class="block text-center bg-slate-100 text-slate-700 font-semibold text-sm rounded-lg px-3 py-2 mb-4">
+                <i class="fas fa-file-signature"></i> Consentimiento informado
+            </a>
+            <h2 class="font-bold text-slate-800 mb-2"><i class="fas fa-heart-pulse text-emerald-600"></i> Últimos signos vitales</h2>
+            @if ($signo)
+                <p class="text-sm mb-3">PA {{ $signo->SIS_SIV }}/{{ $signo->DIA_SIV }} · Pulso {{ $signo->PUL_SIV }} · T° {{ $signo->TEM_SIV }} °C
+                    <span class="block text-xs text-slate-500">{{ \Carbon\Carbon::parse($signo->FEC_SIV)->format('d/m/Y H:i') }}</span></p>
+            @else
+                <p class="text-xs text-slate-500 mb-3">Sin registros.</p>
+            @endif
+            @if ($antecedentes->isNotEmpty())
+                <h2 class="font-bold text-slate-800 mb-2"><i class="fas fa-book-medical text-emerald-600"></i> Antecedentes</h2>
+                @foreach ($antecedentes as $a)
+                    <p class="text-xs mb-1"><strong>{{ $a->TIP_ANT === 'Quirurgico' ? 'Quirúrgico' : $a->TIP_ANT }}:</strong> {{ $a->DES_ANT }}</p>
+                @endforeach
+                <hr class="my-3">
+            @endif
             <h2 class="font-bold text-red-700 mb-2"><i class="fas fa-allergies"></i> Alergias</h2>
             @forelse ($alergias as $a)
                 <p class="text-sm"><strong>{{ $a->DES_ALE }}</strong> <span class="text-xs text-red-600">({{ $a->SEV_ALE }})</span></p>
@@ -160,3 +209,29 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+// RF022: buscador del catálogo CIE-10
+(function () {
+    const input = document.getElementById('cie'), lista = document.getElementById('cie-lista');
+    const desc = document.getElementById('cie-desc'), dia = document.getElementById('diagnostico');
+    let mapa = {}, t = null;
+    function buscar() {
+        fetch(@json(route('medico.cie10')) + '?q=' + encodeURIComponent(input.value), { headers: { 'Accept': 'application/json' } })
+            .then(r => r.json()).then(filas => {
+                lista.innerHTML = ''; mapa = {};
+                filas.forEach(f => { mapa[f.COD_CIE] = f.DES_CIE; const o = document.createElement('option'); o.value = f.COD_CIE; o.label = f.COD_CIE + ' · ' + f.DES_CIE; o.textContent = f.DES_CIE; lista.appendChild(o); });
+                elegir();
+            });
+    }
+    function elegir() {
+        const v = input.value.trim().toUpperCase();
+        if (mapa[v]) { input.value = v; desc.textContent = v + ' · ' + mapa[v]; if (!dia.value) dia.value = mapa[v]; }
+    }
+    input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(buscar, 200); });
+    input.addEventListener('change', elegir);
+    buscar();
+})();
+</script>
+@endpush

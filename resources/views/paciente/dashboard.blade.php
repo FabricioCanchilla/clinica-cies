@@ -68,6 +68,12 @@
             <div><strong>Mi perfil</strong><span>Consulta y actualiza tus datos de contacto.</span></div>
         </a>
     </div>
+
+    @if ($paciente)
+    @php $panel = app(\App\Services\IndicadoresRolService::class)->paciente($paciente->COD_PAC); @endphp
+    <h2 style="margin-top: 8px;"><i class="fas fa-chart-column"></i> Mi resumen</h2>
+    @include('partials.panel-graficos', ['panel' => $panel])
+    @endif
 </section>
 
 {{-- ===================== MIS CITAS (RF007, RF008, RF009) ===================== --}}
@@ -123,7 +129,7 @@
                                         </form>
                                     @endif
 
-                                    @if (in_array($cita->EST_CIT, ['Confirmada', 'Atendida'], true))
+                                    @if (in_array($cita->EST_CIT, ['Confirmada', 'En espera', 'En consulta', 'Atendida'], true))
                                         <a href="{{ route('ordenes.pago', $cita->COD_CIT) }}" class="btn sm"><i class="fas fa-file-invoice-dollar"></i> Orden de pago</a>
                                     @endif
 
@@ -245,6 +251,11 @@
                                 @endif
                             </td>
                             <td class="derecha">
+                                @if ($r->ARC_RES)
+                                    <a href="{{ route('resultados.archivo', $r->COD_RES) }}" target="_blank" class="btn sm">
+                                        <i class="fas fa-paperclip"></i> Informe
+                                    </a>
+                                @endif
                                 <button type="button" class="btn sm" onclick="imprimirResultado(this)">
                                     <i class="fas fa-download"></i> Descargar
                                 </button>

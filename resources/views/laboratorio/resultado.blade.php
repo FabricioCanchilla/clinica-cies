@@ -15,12 +15,16 @@
         <p class="sub">Indicación del médico: {{ $orden->IND_ORD }}</p>
     @endif
 
-    <form method="POST" action="{{ route('laboratorio.resultado.guardar', $orden->COD_ORD) }}" class="formulario ancho">
+    <form method="POST" action="{{ route('laboratorio.resultado.guardar', $orden->COD_ORD) }}" class="formulario ancho" enctype="multipart/form-data">
         @csrf
 
         <label for="descripcion">Resultado (máx. 500 caracteres)</label>
         <textarea id="descripcion" name="descripcion" rows="6" maxlength="500" required
                   style="width: 100%; padding: 10px 12px; margin-bottom: 16px; background: var(--bg); border: 1px solid var(--borde-input); border-radius: 8px; font-family: inherit; font-size: 14px;">{{ old('descripcion') }}</textarea>
+
+        <label for="archivo">Informe adjunto (opcional · PDF, JPG o PNG, máx. 5 MB)</label>
+        <input type="file" id="archivo" name="archivo" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*"
+               style="width: 100%; margin-bottom: 16px;">
 
         <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 20px;">
             <input type="checkbox" name="critico" value="1" style="width: auto; margin: 0;" @checked(old('critico'))>

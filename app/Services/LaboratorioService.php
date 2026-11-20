@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use DomainException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -50,7 +51,7 @@ class LaboratorioService
             ->select(
                 'o.COD_ORD', 'o.FEC_ORD', 'o.IND_ORD', 'o.EST_ORD', 'o.PRI_ORD',
                 's.NOM_SRV', 'p.NOM_PAC', 'p.APE_PAC', 'p.CI_PAC',
-                'r.COD_RES', 'r.DES_RES', 'r.EST_RES', 'r.CRI_RES'
+                'r.COD_RES', 'r.DES_RES', 'r.EST_RES', 'r.CRI_RES', 'r.ARC_RES'
             )
             ->when($buscar !== '', function ($q) use ($buscar) {
                 $q->where(function ($w) use ($buscar) {
@@ -138,13 +139,13 @@ class LaboratorioService
     }
 
     /** Carga el resultado (queda "Cargado", todavía no visible para el médico). */
-    public function guardarResultado(string $codOrd, string $descripcion, bool $critico, object $actor): string
+    public function guardarResultado(string $codOrd, string $descripcion, bool $critico, object $actor, ?UploadedFile $archivo = null): string
     {
         if (empty($actor->COD_EMP)) {
             throw new DomainException('Tu usuario no está vinculado a un empleado, así que no puede cargar resultados.');
         }
 
-        return DB::transaction(function () use ($codOrd, $descripcion, $critico, $actor) {
+        return DB::transaction(function () use ($codOrd, $descripcion, $critico, $actor, $archivo) {
             $orden = $this->bloquearOrden($codOrd);
 
             if ($orden->EST_ORD !== 'En proceso') {
@@ -157,11 +158,16 @@ class LaboratorioService
             $siguiente = (int) DB::table('RESULTADO_EXAMEN')->max('id') + 1;
             $codRes = sprintf('RES%07d', $siguiente);
 
+            // RF027: informe en PDF o imagen, guardado en el almacenamiento privado (no es público)
+            $ruta = $archivo
+                ? $archivo->storeAs('resultados', $codRes . '.' . ($archivo->extension() ?: 'pdf'), 'local')
+                : null;
+
             DB::table('RESULTADO_EXAMEN')->insert([
                 'COD_RES' => $codRes,
                 'FEC_RES' => now(),
                 'DES_RES' => $descripcion,
-                'ARC_RES' => null,
+                'ARC_RES' => $ruta ?: null,
                 'COD_ORD' => $codOrd,
                 'EST_RES' => 'Cargado',
                 'CRI_RES' => $critico ? 1 : 0,
@@ -170,7 +176,7 @@ class LaboratorioService
 
             Auditoria::registrar(
                 'Crear', $critico ? 'Crítica' : 'Alta', self::DOMINIO, 'RESULTADO_EXAMEN', $codRes,
-                "Resultado cargado para la orden {$codOrd}" . ($critico ? ' (valor crítico)' : ''),
+                "Resultado cargado para la orden {$codOrd}" . ($ruta ? ' con archivo adjunto' : '') . ($critico ? ' (valor crítico)' : ''),
                 $actor,
                 codPac: $this->pacienteDeOrden($orden)
             );

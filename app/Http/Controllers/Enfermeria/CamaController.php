@@ -23,16 +23,41 @@ class CamaController extends Controller
             'camas'         => $mapa,
             'porEstado'     => $mapa->countBy('EST_CAM'),
             'historial'     => $this->camas->historialLimpiezas(),
-            'pacientes'     => DB::table('PACIENTE as p')
-                ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('INTERNACION as i')
-                    ->whereColumn('i.COD_PAC', 'p.COD_PAC')->where('i.EST_INT', 'Internado'))
-                ->orderBy('p.APE_PAC')->get(['p.COD_PAC', 'p.NOM_PAC', 'p.APE_PAC', 'p.CI_PAC']),
+            'pacientes'     => $this->pacientesParaInternar(),
             'medicos'       => DB::table('EMPLEADO as e')->join('ESPECIALIDAD as es', 'es.COD_ESP', '=', 'e.COD_ESP')
                 ->orderBy('es.DES_ESP')->orderBy('e.APE_EMP')->get(['e.COD_EMP', 'e.TIT_EMP', 'e.NOM_EMP', 'e.APE_EMP', 'es.DES_ESP']),
             'aislamientos'  => CamaService::AISLAMIENTOS,
             'motivos'       => CamaService::MOTIVOS,
             'minTerminal'   => $this->camas->minutosTerminal(),
         ]);
+    }
+
+    /**
+     * Pacientes que se pueden internar (no están internados). Primero los que tienen cita hoy,
+     * con su médico y motivo para sugerirlos en el formulario; después el resto por apellido.
+     */
+    private function pacientesParaInternar()
+    {
+        $hoy = DB::table('CITA')
+            ->whereDate('FEC_CIT', now()->toDateString())
+            ->whereIn('EST_CIT', ['Confirmada', 'En espera', 'En consulta', 'Atendida'])
+            ->orderBy('HOR_CIT')
+            ->get(['COD_PAC', 'COD_EMP', 'MOT_CIT', 'HOR_CIT'])
+            ->keyBy('COD_PAC');
+
+        return DB::table('PACIENTE as p')
+            ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('INTERNACION as i')
+                ->whereColumn('i.COD_PAC', 'p.COD_PAC')->where('i.EST_INT', 'Internado'))
+            ->orderBy('p.APE_PAC')->orderBy('p.NOM_PAC')
+            ->get(['p.COD_PAC', 'p.NOM_PAC', 'p.APE_PAC', 'p.CI_PAC'])
+            ->each(function ($p) use ($hoy) {
+                $c = $hoy->get($p->COD_PAC);
+                $p->CITA_HOY = (bool) $c;
+                $p->MED_HOY  = $c->COD_EMP ?? '';
+                $p->MOT_HOY  = $c->MOT_CIT ?? '';
+                $p->HOR_HOY  = $c ? substr($c->HOR_CIT, 0, 5) : '';
+            })
+            ->sortByDesc('CITA_HOY')->values();
     }
 
     public function internar(Request $request, string $codCam)

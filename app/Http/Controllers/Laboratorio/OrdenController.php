@@ -68,13 +68,16 @@ class OrdenController extends Controller
     {
         $d = $request->validate([
             'descripcion' => ['required', 'string', 'max:500'],
+            'archivo'     => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ], [
+            'archivo.mimes' => 'El adjunto debe ser un PDF o una imagen (JPG o PNG).',
+            'archivo.max'   => 'El adjunto no puede pasar de 5 MB.',
             'descripcion.required' => 'Escribe el resultado del examen.',
             'descripcion.max'      => 'El resultado no puede pasar de 500 caracteres.',
         ]);
 
         try {
-            $this->lab->guardarResultado($codOrd, trim($d['descripcion']), $request->boolean('critico'), auth()->user());
+            $this->lab->guardarResultado($codOrd, trim($d['descripcion']), $request->boolean('critico'), auth()->user(), $request->file('archivo'));
         } catch (DomainException $e) {
             return redirect()->route('laboratorio.dashboard')->withErrors(['orden' => $e->getMessage()]);
         }

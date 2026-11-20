@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
  * Recepción (RF036, RF037, RF038).
  * - RF036 / RN07: búsqueda por CI antes de crear una ficha; alta presencial de ficha y cuenta.
  * - RF037 / RN23: disponibilidad de médicos, consultorios y camas; check-in de llegada.
- *   Sin AJ01 (estados «En espera» y «En consulta») el check-in se registra en AUDITORIA.
+ *   AJ01: el check-in pasa la cita a «En espera»; al abrir la atención el médico la pasa a «En consulta».
  * - RF038 / RN21: validación de seguros y cancelación o reprogramación justificada por la clínica.
  */
 class RecepcionService
@@ -149,7 +149,7 @@ class RecepcionService
             $enCurso = DB::table('CITA')
                 ->where('COD_CON', $k->COD_CON)
                 ->where('FEC_CIT', $ahora->toDateString())
-                ->whereIn('EST_CIT', ['Confirmada', 'Atendida'])
+                ->whereIn('EST_CIT', ['Confirmada', 'En espera', 'En consulta', 'Atendida'])
                 ->where('HOR_CIT', '<=', $ahora->format('H:i:s'))
                 ->where('HOR_CIT', '>', $ahora->copy()->subMinutes($dur)->format('H:i:s'))
                 ->exists();
@@ -193,8 +193,10 @@ class RecepcionService
                 throw new DomainException('El paciente llegó después de los 15 minutos de tolerancia: la cita quedó como «No asistio» (RN23).');
             }
 
+            // AJ01: con la llegada registrada la cita pasa a «En espera» (aparece así en la agenda del médico)
+            DB::table('CITA')->where('COD_CIT', $codCit)->update(['EST_CIT' => 'En espera']);
             Auditoria::registrar('Check-in', 'Baja', 'DOM04', 'CITA', $codCit,
-                'Llegada del paciente registrada en recepción a las ' . Carbon::now()->format('H:i'),
+                'Llegada del paciente registrada en recepción a las ' . Carbon::now()->format('H:i') . ': cita «En espera»',
                 codPac: $c->COD_PAC);
         });
     }

@@ -10,7 +10,7 @@
     <h1>Lotes y stock</h1>
     <p class="sub">Existencias, entradas, bajas y alertas de vencimiento (PEPS: sale primero el lote que vence antes).</p>
 
-    <div class="grid">
+    <div class="grid" data-vivo>
         <div class="card"><div class="num">{{ $contadores['vigentes'] }}</div><div class="lbl">Lotes vigentes</div></div>
         <div class="card"><div class="num" style="color:#b45309;">{{ $contadores['por_vencer'] }}</div><div class="lbl">Por vencer (≤ {{ $diasAlerta }} días)</div></div>
         <div class="card"><div class="num" style="color:#b91c1c;">{{ $contadores['vencidos'] }}</div><div class="lbl">Vencidos con stock</div></div>

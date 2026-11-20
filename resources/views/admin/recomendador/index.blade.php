@@ -185,18 +185,6 @@
                 @endforeach
             </tbody>
         </table>
-        @php $dif = $largo[$sug] - $largo[0]; @endphp
-        <p class="pc-nota">
-            @if ($sug !== 0)
-                Frente a mantener {{ $actual }} camas, la opción sugerida mejora el resultado en <strong>{{ $bs($dif) }} al mes</strong>
-                (unos {{ $bs(12 * $dif) }} al año).
-            @else
-                Mantener la capacidad actual es la opción con mejor resultado esperado.
-            @endif
-            @if ($r['margen'] < 0.05 * abs($largo[$sug]))
-                La diferencia con la siguiente opción es pequeña ({{ $bs($r['margen']) }} al mes): conviene revisar la sugerencia cada mes.
-            @endif
-        </p>
     </div>
 </div>
 
