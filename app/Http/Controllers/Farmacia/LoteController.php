@@ -35,6 +35,28 @@ class LoteController extends Controller
         ]);
     }
 
+    public function crearMedicamento(Request $request)
+    {
+        $datos = $request->validate([
+            'nombre_medicamento' => ['required', 'string', 'max:80'],
+            'precio_inicial' => ['required', 'numeric', 'gt:0', 'max:100000', 'decimal:0,2'],
+        ], [
+            'nombre_medicamento.required' => 'Escribe el nombre y presentación del medicamento.',
+            'nombre_medicamento.max' => 'El nombre no puede tener más de 80 caracteres.',
+            'precio_inicial.required' => 'Indica el precio unitario.',
+        ]);
+
+        try {
+            $codigo = $this->farmacia->crearMedicamento(
+                trim($datos['nombre_medicamento']), (string) $datos['precio_inicial'], auth()->user()
+            );
+        } catch (DomainException $e) {
+            return back()->withInput()->withErrors(['medicamento' => $e->getMessage()]);
+        }
+
+        return redirect()->route('farmacia.lotes')->with('ok', "Medicamento {$codigo} registrado. Agrega un lote para incorporar existencias.");
+    }
+
     public function precio(Request $request, string $medicamento, \App\Services\CobroMedicamentoService $servicio)
     {
         $d = $request->validate(['precio' => ['required', 'numeric', 'gt:0', 'max:100000', 'decimal:0,2']]);

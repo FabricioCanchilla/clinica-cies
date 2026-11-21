@@ -15,6 +15,90 @@ use Tests\TestCase;
 
 class MedicoTest extends TestCase
 {
+    public function test_secciones_publicas_y_modulos_se_abren_en_pantallas_separadas(): void
+    {
+        auth()->logout();
+        foreach (['inicio' => 'Tu Salud', 'nosotros' => 'Quiénes Somos', 'servicios' => 'Servicios y Especialidades Médicas', 'investigacion' => 'Investigación Clínica', 'ubicacion' => 'Confirma tu sede', 'contacto' => 'Contacto y orientación'] as $seccion => $titulo) {
+            $this->get('/login?seccion='.$seccion)->assertOk()->assertSee($titulo);
+        }
+        $this->get('/login?seccion=nosotros')->assertDontSee('Servicios y Especialidades Médicas');
+
+        $this->actingAs(Usuario::where('USR_USR', 'paciente')->firstOrFail());
+        $this->get('/paciente')->assertOk()->assertDontSee('Resultados de exámenes');
+        foreach (['citas'=>'Mis citas', 'resultados'=>'Resultados de exámenes', 'recetas'=>'Mis recetas', 'historial'=>'Historial de consultas', 'pagos'=>'Pagos y comprobantes', 'perfil'=>'Mi perfil', 'avisos'=>'Notificaciones'] as $seccion=>$titulo) {
+            $this->get('/paciente?seccion='.$seccion)->assertOk()->assertSee($titulo);
+        }
+        $this->actingAs(Usuario::where('USR_USR', 'recepcion')->firstOrFail());
+        foreach (['citas'=>'Citas y lista de espera', 'disponibilidad'=>'Horarios libres', 'reservar'=>'Reservar una cita', 'pacientes'=>'Registrar paciente nuevo', 'seguros'=>'Seguros médicos'] as $seccion=>$titulo) {
+            $url = '/recepcion?seccion='.$seccion.($seccion === 'disponibilidad' ? '&medico=EMP000003' : '');
+            $this->get($url)->assertOk()->assertSee($titulo);
+        }
+        $this->actingAs(Usuario::where('USR_USR', 'farmacia')->firstOrFail());
+        foreach (['existencias'=>'Existencias por medicamento', 'medicamento'=>'Nombre y presentación', 'entrada'=>'Registrar entrada de lote', 'lotes'=>'Buscar por lote o medicamento', 'precios'=>'Nuevo precio unitario'] as $seccion=>$titulo) {
+            $this->get('/farmacia/lotes?seccion='.$seccion)->assertOk()->assertSee($titulo);
+        }
+        $this->actingAs(Usuario::where('USR_USR', 'caja')->firstOrFail());
+        $this->post('/caja/abrir', ['monto'=>0])->assertSessionHasNoErrors();
+        foreach (['citas'=>'Citas con saldo por cobrar', 'movimientos'=>'Movimientos de esta caja', 'examenes'=>'Cobro de exámenes', 'medicamentos'=>'Cobro y entrega de medicamentos', 'comprobantes'=>'Comprobantes de esta caja', 'cierre'=>'Historial de cierres'] as $seccion=>$titulo) {
+            $this->get('/caja?seccion='.$seccion)->assertOk()->assertSee($titulo);
+        }
+        $this->actingAs(Usuario::where('USR_USR', 'enfermeria')->firstOrFail());
+        foreach (['pacientes'=>'Pacientes internados', 'dosis'=>'Dosis pendientes y entrega de turno', 'camas'=>'Estado de camas'] as $seccion=>$titulo) {
+            $this->get('/enfermeria/pacientes?seccion='.$seccion)->assertOk()->assertSee($titulo);
+        }
+    }
+
+    public function test_secciones_clinicas_y_administrativas_se_abren_por_separado(): void
+    {
+        $this->actingAs(Usuario::where('USR_USR', 'medico')->firstOrFail());
+        foreach (['resumen'=>'Diagnóstico y plan', 'recetas'=>'Recetas emitidas', 'examenes'=>'Exámenes diagnósticos', 'interconsultas'=>'Derivaciones e interconsultas', 'consentimientos'=>'Consentimientos informados'] as $seccion=>$titulo) {
+            $this->get('/medico/consultas/CNS0000001?seccion='.$seccion)->assertOk()->assertSee($titulo);
+        }
+        $this->get('/medico/consultas/CNS0000001?seccion=recetas')->assertDontSee('Exámenes diagnósticos');
+        foreach (['datos'=>'Datos del paciente', 'actualizar'=>'Actualizar expediente', 'consultas'=>'Consultas anteriores', 'notas'=>'Notas de evolución', 'signos'=>'Signos vitales recientes'] as $seccion=>$titulo) {
+            $this->get('/medico/historias/PAC0000001?seccion='.$seccion)->assertOk()->assertSee($titulo)->assertSee('Alergias');
+        }
+        $this->actingAs(Usuario::where('USR_USR', 'admin')->firstOrFail());
+        foreach (['camas'=>'Estado de camas', 'ingreso'=>'Registrar ingreso', 'internaciones'=>'Internaciones'] as $seccion=>$titulo) {
+            $this->get('/admin/internacion?seccion='.$seccion)->assertOk()->assertSee($titulo);
+        }
+        foreach (['cajas'=>'Cajas', 'pagos'=>'Últimos pagos', 'examenes'=>'Últimos cobros de exámenes', 'medicamentos'=>'Últimos cobros de medicamentos'] as $seccion=>$titulo) {
+            $this->get('/admin/caja?seccion='.$seccion)->assertOk()->assertSee($titulo);
+        }
+    }
+
+    public function test_cuentas_de_prueba_inician_sesion_y_acceden_a_su_panel(): void
+    {
+        $cuentas = [
+            'admin' => 'admin.dashboard',
+            'recepcion' => 'recepcion.dashboard',
+            'medico' => 'medico.dashboard',
+            'enfermeria' => 'enfermeria.dashboard',
+            'caja' => 'caja.dashboard',
+            'paciente' => 'paciente.dashboard',
+            'laboratorio' => 'laboratorio.dashboard',
+            'farmacia' => 'farmacia.dashboard',
+            'auditor' => 'auditor.dashboard',
+        ];
+
+        DB::connection()->getPdo()->sqliteCreateFunction('CEIL', fn ($valor) => $valor === null ? null : ceil($valor), 1);
+        auth()->logout();
+        foreach ($cuentas as $usuario => $panel) {
+            $this->post('/login', ['usuario' => $usuario, 'contrasena' => $usuario.'123'])
+                ->assertRedirect(route('panel'))->assertSessionHasNoErrors();
+            $this->assertAuthenticatedAs(Usuario::where('USR_USR', $usuario)->firstOrFail());
+            $this->get('/panel')->assertRedirect(route($panel));
+            if ($usuario === 'auditor') {
+                $this->get(route($panel))->assertRedirect(route('admin.auditoria'));
+                $this->get(route('admin.auditoria'))->assertOk();
+            } else {
+                $this->get(route($panel))->assertOk();
+            }
+            $this->post('/logout')->assertRedirect();
+            $this->assertGuest();
+        }
+    }
+
     public function test_farmacia_y_auditoria_respetan_roles_y_registran_consultas(): void
     {
         DB::connection()->getPdo()->sqliteCreateFunction('CEIL', fn ($valor) => $valor === null ? null : ceil($valor), 1);
@@ -101,6 +185,26 @@ class MedicoTest extends TestCase
         ]);
     }
 
+    public function test_farmacia_puede_crear_medicamento_con_precio_y_registrar_su_lote(): void
+    {
+        $datos = ['nombre_medicamento' => 'Amoxicilina 250 mg suspensión', 'precio_inicial' => '22.50'];
+        $this->post('/farmacia/medicamentos', $datos)->assertForbidden();
+        $this->actingAs(Usuario::where('USR_USR', 'farmacia')->firstOrFail());
+        $this->get('/farmacia/lotes')->assertOk()->assertSee('Agregar medicamento');
+        $this->post('/farmacia/medicamentos', ['nombre_medicamento' => 'Ejemplo', 'precio_inicial' => 0])->assertSessionHasErrors('precio_inicial');
+        $this->post('/farmacia/medicamentos', $datos)->assertSessionHasNoErrors()->assertRedirect('/farmacia/lotes');
+        $medicamento = DB::table('MEDICAMENTO')->where('DES_MED', $datos['nombre_medicamento'])->first();
+        $this->assertNotNull($medicamento);
+        $this->assertDatabaseHas('FARMACIA_PRECIO', ['COD_MED' => $medicamento->COD_MED, 'PRECIO' => 22.50]);
+        $this->assertDatabaseHas('AUDITORIA', ['ENT_AUD' => 'MEDICAMENTO', 'REG_AUD' => $medicamento->COD_MED, 'ACC_AUD' => 'Crear medicamento']);
+        $this->assertDatabaseMissing('LOTE_MEDICAMENTO', ['COD_MED' => $medicamento->COD_MED]);
+        $this->post('/farmacia/medicamentos', $datos)->assertSessionHasErrors('medicamento');
+        $this->assertSame(1, DB::table('MEDICAMENTO')->where('DES_MED', $datos['nombre_medicamento'])->count());
+        $this->post('/farmacia/lotes', ['cod_med' => $medicamento->COD_MED, 'nro_lot' => 'AMOX-01', 'cantidad' => 20, 'fecven' => '2027-12-01'])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('LOTE_MEDICAMENTO', ['COD_MED' => $medicamento->COD_MED, 'NRO_LOT' => 'AMOX-01', 'CANDIS_LOT' => 20]);
+        $this->get('/farmacia/lotes')->assertOk()->assertSee($datos['nombre_medicamento']);
+    }
+
     public function test_cobros_de_examen_y_medicamento_se_incluyen_en_arqueo(): void
     {
         $this->actingAs(Usuario::where('USR_USR', 'farmacia')->firstOrFail());
@@ -108,7 +212,8 @@ class MedicoTest extends TestCase
         $this->post('/farmacia/recetas/REC0000001/items/DRE0000001/cantidad', ['cantidad' => 6, 'confirmacion' => 1])->assertSessionHasNoErrors();
         $this->actingAs(Usuario::where('USR_USR', 'caja')->firstOrFail());
         $this->post('/caja/abrir', ['monto' => 100])->assertSessionHasNoErrors();
-        $this->get('/caja')->assertOk()->assertSee('Cobro de exámenes')->assertSee('Paracetamol');
+        $this->get('/caja?seccion=examenes')->assertOk()->assertSee('Cobro de exámenes');
+        $this->get('/caja?seccion=medicamentos')->assertOk()->assertSee('Paracetamol');
         $precioExamen = (float) DB::table('SERVICIO')->where('COD_SRV', 'SRV00002')->value('PRE_SRV');
         $this->post('/caja/examenes/ORD0000001/cobrar', ['metodo' => 'MET0001', 'precio' => $precioExamen])->assertSessionHasNoErrors();
         $this->post('/caja/examenes/ORD0000001/cobrar', ['metodo' => 'MET0001', 'precio' => $precioExamen])->assertSessionHasErrors('cobro');
@@ -127,7 +232,7 @@ class MedicoTest extends TestCase
         $medicamento = DB::table('CAJA_MEDICAMENTO')->where('COD_DRE', 'DRE0000001')->first();
         $this->assertDatabaseHas('CAJA_MEDICAMENTO_LOTE', ['COD_CME' => $medicamento->COD_CME, 'COD_LOT' => 'LOT0000002', 'CANTIDAD' => 3]);
         $this->actingAs(Usuario::where('USR_USR', 'paciente')->firstOrFail());
-        $this->get('/paciente')->assertOk()->assertSee($medicamento->COD_CME)->assertSee($cobro->COD_CEX);
+        $this->get('/paciente?seccion=pagos')->assertOk()->assertSee($medicamento->COD_CME)->assertSee($cobro->COD_CEX);
         $this->get('/paciente/cobros/medicamento/'.$medicamento->COD_CME.'/pdf')->assertOk()->assertHeader('Content-Type', 'application/pdf');
         $this->get('/paciente/cobros/examen/'.$cobro->COD_CEX.'/pdf')->assertOk()->assertHeader('Content-Type', 'application/pdf');
         $otro = (array) DB::table('PACIENTE')->where('COD_PAC', 'PAC0000001')->first();
@@ -252,7 +357,7 @@ class MedicoTest extends TestCase
         \Illuminate\Support\Facades\Storage::disk('local')->assertExists($resultado->ARC_RES);
         $this->assertDatabaseHas('NOTIFICACION', ['TIP_NOT' => 'Resultado crítico', 'COD_USR' => 'USR00003', 'EST_NOT' => 'Enviada', 'REF_NOT' => 'ORD0000001']);
         $this->actingAs(Usuario::where('USR_USR', 'paciente')->firstOrFail());
-        $this->get('/paciente')->assertOk()->assertDontSee('Valor de prueba');
+        $this->get('/paciente?seccion=resultados')->assertOk()->assertDontSee('Valor de prueba');
         $this->get('/resultados/'.$resultado->COD_RES.'/archivo')->assertNotFound();
         $this->actingAs(Usuario::where('USR_USR', 'laboratorio')->firstOrFail());
         $this->post('/laboratorio/ordenes/ORD0000001/validar')->assertSessionHasNoErrors();
@@ -262,7 +367,7 @@ class MedicoTest extends TestCase
         $this->assertDatabaseHas('NOTIFICACION', ['TIP_NOT' => 'Resultado disponible', 'COD_USR' => 'USR00006', 'REF_NOT' => 'ORD0000001']);
         $this->assertDatabaseHas('NOTIFICACION', ['TIP_NOT' => 'Resultado disponible', 'COD_USR' => 'USR00003', 'REF_NOT' => 'ORD0000001']);
         $this->actingAs(Usuario::where('USR_USR', 'paciente')->firstOrFail());
-        $this->get('/paciente')->assertOk()->assertSee('Valor de prueba')->assertSee('Descargar resultado adjunto');
+        $this->get('/paciente?seccion=resultados')->assertOk()->assertSee('Valor de prueba')->assertSee('Descargar resultado adjunto');
         $this->get('/resultados/'.$resultado->COD_RES.'/archivo')->assertOk();
         $otro = (array) DB::table('PACIENTE')->where('COD_PAC', 'PAC0000001')->first();
         unset($otro['id']); $otro['COD_PAC'] = 'PAC0000098'; $otro['CI_PAC'] = '98989898'; $otro['COR_PAC'] = 'otro@example.test';
@@ -273,7 +378,7 @@ class MedicoTest extends TestCase
         $this->actingAs(Usuario::where('USR_USR', 'otro')->firstOrFail());
         $this->get('/resultados/'.$resultado->COD_RES.'/archivo')->assertNotFound();
         $this->actingAs(Usuario::where('USR_USR', 'medico')->firstOrFail());
-        $this->get('/medico/consultas/CNS0000001')->assertOk()->assertSee('Descargar archivo');
+        $this->get('/medico/consultas/CNS0000001?seccion=examenes')->assertOk()->assertSee('Descargar archivo');
         $this->get('/resultados/'.$resultado->COD_RES.'/archivo')->assertOk();
         $this->actingAs(Usuario::where('USR_USR', 'caja')->firstOrFail());
         $this->get('/resultados/'.$resultado->COD_RES.'/archivo')->assertForbidden();
@@ -324,7 +429,7 @@ class MedicoTest extends TestCase
         $this->assertDatabaseHas('PAGO', ['COD_PAG' => 'PAG9999998', 'EST_PAG' => 'Confirmado']);
         $this->get('/caja')->assertOk()->assertSee('caja/citas/CIT0000099/cobrar', false);
         $this->post('/caja/cerrar', ['contado' => 100])->assertSessionHasNoErrors();
-        $this->get('/caja')->assertOk()->assertSee('Historial de cierres')->assertSee($caja->COD_CAJ);
+        $this->get('/caja?seccion=cierre')->assertOk()->assertSee('Historial de cierres')->assertSee($caja->COD_CAJ);
         $this->post('/caja/abrir', ['monto' => 0])->assertSessionHasNoErrors();
         $this->travel(1)->day();
         $this->get('/caja')->assertOk()->assertSee('caja corresponde a un día anterior');
@@ -341,6 +446,10 @@ class MedicoTest extends TestCase
         $this->actingAs(Usuario::where('USR_USR', 'enfermeria')->firstOrFail());
         $this->get('/enfermeria/pacientes')->assertOk()->assertSee('Pacientes internados');
         $this->get('/enfermeria/pacientes/INT0000099')->assertOk()->assertSee('Paracetamol');
+        foreach (['resumen'=>'Indicaciones y recetas activas', 'signos'=>'Signos recientes', 'dosis'=>'Dosis de medicamentos', 'notas'=>'Notas de enfermería y entrega de turno', 'balance'=>'Balance hídrico', 'insumos'=>'Insumos de familiares'] as $seccion=>$titulo) {
+            $this->get('/enfermeria/pacientes/INT0000099?seccion='.$seccion)->assertOk()->assertSee($titulo)->assertSee('Alergias');
+        }
+        $this->get('/enfermeria/pacientes/INT0000099?seccion=dosis')->assertSee('firma-dosis');
         $this->post('/enfermeria/pacientes/INT0000099/signos', ['sistolica' => 120, 'diastolica' => 80, 'pulso' => 75, 'temperatura' => 36.5])->assertSessionHasNoErrors();
         $this->post('/enfermeria/pacientes/INT0000099/signos', ['sistolica' => 70, 'diastolica' => 80, 'pulso' => 75, 'temperatura' => 36.5])->assertSessionHasErrors('sistolica');
         $this->post('/enfermeria/pacientes/INT0000099/nota', ['texto' => 'Paciente en observación'])->assertSessionHasNoErrors();
@@ -628,10 +737,10 @@ class MedicoTest extends TestCase
             'COD_RES' => 'RES0000098', 'FEC_RES' => now(), 'DES_RES' => 'Resultado aún no publicado',
             'COD_ORD' => 'ORD0000001', 'EST_RES' => 'Cargado', 'CRI_RES' => 0, 'COD_EMP' => 'EMP000003',
         ]);
-        $this->get('/paciente')->assertOk()->assertSee('Resultados de exámenes')->assertDontSee('Resultado aún no publicado')->assertDontSee('Resultado de otro paciente')
+        $this->get('/paciente?seccion=resultados')->assertOk()->assertSee('Resultados de exámenes')->assertDontSee('Resultado aún no publicado')->assertDontSee('Resultado de otro paciente')
             ->assertSee('Mis recetas')->assertSee('Pagos y comprobantes')->assertSee('Navegación del paciente');
         DB::table('RESULTADO_EXAMEN')->where('COD_RES', 'RES0000098')->update(['EST_RES' => 'Publicado']);
-        $this->get('/paciente')->assertOk()->assertSee('Resultado aún no publicado');
+        $this->get('/paciente?seccion=resultados')->assertOk()->assertSee('Resultado aún no publicado');
         $this->get('/paciente/recetas/REC0000001/pdf')->assertOk()->assertHeader('Content-Type', 'application/pdf');
         $this->get('/paciente/recetas/REC9999999/pdf')->assertNotFound();
         $this->get('/paciente/comprobantes/COM99999999/pdf')->assertNotFound();
@@ -822,9 +931,9 @@ class MedicoTest extends TestCase
             'COD_RES' => 'RES0000099', 'FEC_RES' => now(), 'DES_RES' => 'Resultado confidencial no publicado',
             'COD_ORD' => 'ORD0000001', 'EST_RES' => 'Cargado', 'CRI_RES' => 0, 'COD_EMP' => 'EMP000003',
         ]);
-        $this->get('/medico/consultas/CNS0000001')->assertOk()->assertDontSee('Resultado confidencial no publicado');
+        $this->get('/medico/consultas/CNS0000001?seccion=examenes')->assertOk()->assertDontSee('Resultado confidencial no publicado');
         DB::table('RESULTADO_EXAMEN')->where('COD_RES', 'RES0000099')->update(['EST_RES' => 'Publicado']);
-        $this->get('/medico/consultas/CNS0000001')->assertOk()->assertSee('Resultado confidencial no publicado');
+        $this->get('/medico/consultas/CNS0000001?seccion=examenes')->assertOk()->assertSee('Resultado confidencial no publicado');
     }
 
     public function test_pdf_download_returns_pdf_and_is_audited(): void

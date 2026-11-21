@@ -202,7 +202,7 @@
         .section-title { font-size: 28px; font-weight: 800; color: #0f172a; text-align: center; margin-bottom: 8px; }
         .section-subtitle { text-align: center; color: #64748b; font-size: 15px; margin-bottom: 40px; }
 
-        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 24px; }
         .info-card {
             background: white;
             border: 1px solid #e2e8f0;
@@ -258,9 +258,11 @@
             margin-bottom: 14px;
         }
         
+        .section a { color: var(--cies-green-dark); } .info-card p + p { margin-top: 14px; }
+        .nav-links a[aria-current="page"] { color: var(--cies-green-dark); font-weight: 700; }
         @media(max-width: 1024px) {
             .features-bar { grid-template-columns: repeat(2, 1fr); }
-            .nav-links { display: none; }
+            .header { position: relative; flex-wrap: wrap; gap: 12px; padding: 16px 20px; } .nav-links { display: flex; order: 3; width: 100%; overflow-x: auto; gap: 20px; padding: 8px 0; } .hero { padding-top: 70px; } .section[id] { padding-top: 48px !important; }
         }
         @media(max-width: 640px) {
             .features-bar { grid-template-columns: 1fr; }
@@ -273,6 +275,11 @@
     </style>
 </head>
 <body>
+    @php
+        $seccionesPublicas = ['inicio', 'nosotros', 'servicios', 'investigacion', 'ubicacion', 'contacto'];
+        $paginaPublica = request('seccion', 'inicio');
+        if (!in_array($paginaPublica, $seccionesPublicas, true)) { $paginaPublica = 'inicio'; }
+    @endphp
 
     <!-- BARRA SUPERIOR -->
     <header class="header">
@@ -281,35 +288,32 @@
         </div>
 
         <ul class="nav-links">
-            <li><a href="#inicio">Inicio</a></li>
-            <li><a href="#nosotros">Nosotros</a></li>
-            <li><a href="#servicios">Servicios</a></li>
-            <li><a href="#investigacion">Investigación</a></li>
-            <li><a href="#ubicacion">Ubicación</a></li>
-            <li><a href="#contacto">Contacto</a></li>
+            <li><a href="{{ route('login', ['seccion' => 'inicio']) }}" @if($paginaPublica === 'inicio') aria-current="page" @endif>Inicio</a></li>
+            <li><a href="{{ route('login', ['seccion' => 'nosotros']) }}" @if($paginaPublica === 'nosotros') aria-current="page" @endif>Nosotros</a></li>
+            <li><a href="{{ route('login', ['seccion' => 'servicios']) }}" @if($paginaPublica === 'servicios') aria-current="page" @endif>Servicios</a></li>
+            <li><a href="{{ route('login', ['seccion' => 'investigacion']) }}" @if($paginaPublica === 'investigacion') aria-current="page" @endif>Investigación</a></li>
+            <li><a href="{{ route('login', ['seccion' => 'ubicacion']) }}" @if($paginaPublica === 'ubicacion') aria-current="page" @endif>Ubicación</a></li>
+            <li><a href="{{ route('login', ['seccion' => 'contacto']) }}" @if($paginaPublica === 'contacto') aria-current="page" @endif>Contacto</a></li>
         </ul>
 
         <div class="header-actions">
-            <div class="emergency-contact">
-                <span class="emergency-label"><i class="fas fa-phone-alt"></i> 24/7 Urgencias</span>
-                <a href="tel:160" class="emergency-number">+591 (2) 244-0000</a>
-            </div>
             <button type="button" onclick="openLoginModal()" class="btn-login-nav"><i class="fas fa-user"></i> Iniciar Sesión</button>
-            <a href="#servicios" class="btn-appointment">Agendar Cita</a>
+            <button type="button" onclick="openLoginModal()" class="btn-appointment" style="border:0;cursor:pointer">Agendar cita</button>
         </div>
     </header>
 
+@if ($paginaPublica === 'inicio')
     <!-- HERO PRINCIPAL -->
     <section class="hero" id="inicio">
         <div class="hero-content">
             <div class="hero-text">
-                <span class="tag">Centro Médico Certificado</span>
+                <span class="tag">Salud integral</span>
                 <h1>Tu Salud, <br><span>Nuestra Prioridad</span></h1>
-                <p>Atención médica humanizada y tecnología de vanguardia. Cuidamos de tu bienestar para construir un mejor mañana.</p>
+                <p>Consulta tus citas y encuentra información para acompañar el cuidado de tu salud.</p>
                 
                 <div class="hero-buttons">
                     <button type="button" onclick="openLoginModal()" class="btn-primary-action"><i class="fas fa-sign-in-alt"></i> Iniciar Sesión</button>
-                    <a href="#servicios" class="btn-secondary-action"><i class="fas fa-stethoscope"></i> Ver Especialidades</a>
+                    <a href="{{ route('login', ['seccion' => 'servicios']) }}" class="btn-secondary-action"><i class="fas fa-stethoscope"></i> Ver Especialidades</a>
                 </div>
             </div>
         </div>
@@ -335,8 +339,8 @@
             <div class="feature-item">
                 <div class="feature-icon"><i class="fas fa-clock"></i></div>
                 <div class="feature-texts">
-                    <h4>Servicios 24/7</h4>
-                    <p>Atención continua de emergencias cuando lo necesites.</p>
+                    <h4>Consulta tus citas</h4>
+                    <p>Revisa tus reservas y su estado desde tu cuenta.</p>
                 </div>
             </div>
             <div class="feature-item">
@@ -349,8 +353,10 @@
         </div>
     </div>
 
+@endif
+@if ($paginaPublica === 'nosotros')
     <!-- SECCIÓN: NOSOTROS (RF001: reseña y misión) -->
-    <section class="section" id="nosotros">
+    <section class="section" id="nosotros" style="padding-top:145px; min-height:65vh; width:100%">
         <h2 class="section-title">Quiénes Somos</h2>
         <p class="section-subtitle">Centro de Investigación, Educación y Servicios</p>
         <div class="cards-grid">
@@ -364,13 +370,16 @@
                 <h3>Salud integral para la comunidad</h3>
                 <p>Brindar servicios de salud integral, humanizados y de calidad, con atención en consulta externa, laboratorio, farmacia e internación, coordinando de forma segura y trazable el trabajo de todo el personal en beneficio del paciente.</p>
             </div>
+            <div class="info-card"><span class="tag">Nuestro enfoque</span><h3>Una atención centrada en ti</h3><p>La orientación, la confidencialidad y el seguimiento son parte de una atención que respeta las necesidades de cada persona.</p></div>
         </div>
     </section>
 
+@endif
+@if ($paginaPublica === 'servicios')
     <!-- SECCIÓN: SERVICIOS Y ESPECIALIDADES (RF001) -->
-    <section class="section" id="servicios">
+    <section class="section" id="servicios" style="padding-top:145px; min-height:65vh; width:100%">
         <h2 class="section-title">Servicios y Especialidades Médicas</h2>
-        <p class="section-subtitle">Catálogo para orientar tu atención y agendamiento de citas</p>
+        <p class="section-subtitle">Consulta general, orientación y servicios de apoyo para tu atención</p>
 
         <div class="cards-grid">
             <div class="info-card">
@@ -387,8 +396,9 @@
             </div>
         </div>
 
+        <div class="info-card" style="margin-top:24px"><span class="tag">Cómo empezar</span><h3>De la consulta al seguimiento</h3><p>La consulta general es el primer paso para la atención. Cuando el médico indique una derivación, podrás solicitar la especialidad correspondiente. Ingresa al portal para revisar tus citas y resultados publicados.</p></div>
         @if (!empty($especialidades) && count($especialidades))
-            <h3 style="text-align:center; margin: 32px 0 14px; font-size: 18px; color:#0f172a;">Especialidades disponibles para agendar</h3>
+            <h3 style="text-align:center; margin: 32px 0 14px; font-size: 18px; color:#0f172a;">Especialidades registradas</h3>
             <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
                 @foreach ($especialidades as $esp)
                     <span class="tag" style="font-size:13px; padding:8px 14px;">{{ $esp->DES_ESP }}</span>
@@ -397,79 +407,54 @@
         @endif
     </section>
 
+@endif
+@if ($paginaPublica === 'investigacion')
     <!-- SECCIÓN: INVESTIGACIÓN E IMPACTO SOCIAL -->
-    <section class="section" id="investigacion" style="background: #f1f5f9; max-width: 100%; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+    <section class="section" id="investigacion" style="padding-top:145px; min-height:65vh; background: #f1f5f9; max-width: 100%; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
         <div style="max-width: 1200px; margin: 0 auto;">
             <div class="cards-grid">
                 <div class="info-card" style="background: white;">
                     <span class="tag">Unidad Científica</span>
                     <h3>Investigación Clínica</h3>
-                    <p>Desarrollamos proyectos de investigación médica y estudios epidemiológicos enfocados en elevar la calidad asistencial y los protocolos de salud pública.</p>
+                    <p>La investigación y la educación en salud contribuyen a comprender las necesidades de la población y a fortalecer la prevención y la atención informada.</p>
                 </div>
                 <div class="info-card" id="impacto" style="background: white;">
                     <span class="tag" style="background: rgba(16, 185, 129, 0.1); color: #059669;">Impacto Social</span>
                     <h3>Programas y Atención Solidaria</h3>
-                    <p>Llevamos brigadas móviles y campañas de salud preventiva gratuita a comunidades y sectores vulnerables de la población.</p>
+                    <p>La orientación y la educación ayudan a las personas a conocer sus opciones de cuidado y tomar decisiones informadas sobre su salud.</p>
                 </div>
             </div>
         </div>
     </section>
 
+@endif
+@if ($paginaPublica === 'ubicacion')
     <!-- SECCIÓN: UBICACIÓN (RF002 / RF004: mapa interactivo sin iniciar sesión) -->
-    <section class="section" id="ubicacion">
-        <h2 class="section-title">Ubicación y Contacto</h2>
-        <p class="section-subtitle">Encuéntranos en La Paz. Ante una emergencia llama al 160.</p>
-        <div style="border-radius:16px; overflow:hidden; border:1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,.06);">
-            <iframe title="Mapa de la Clínica CIES" loading="lazy" style="width:100%; height:360px; border:0; display:block;"
-                src="https://www.openstreetmap.org/export/embed.html?bbox=-68.1500%2C-16.5200%2C-68.1050%2C-16.4850&amp;layer=mapnik&amp;marker=-16.5000%2C-68.1300"></iframe>
-        </div>
-        <p style="text-align:center; margin-top:10px; font-size:13px;">
-            <a href="https://www.openstreetmap.org/?mlat=-16.5000&amp;mlon=-68.1300#map=16/-16.5000/-68.1300" target="_blank" rel="noopener" style="color: var(--cies-green); font-weight:600;">Abrir el mapa en pantalla completa</a>
-        </p>
+    <section class="section" id="ubicacion" style="padding-top:145px; min-height:65vh; width:100%">
+        <h1 class="section-title">Ubicación</h1>
+        <p class="section-subtitle">Planifica tu visita con información confirmada.</p>
+        <div class="cards-grid"><article class="info-card"><span class="tag">Antes de acudir</span><h3>Confirma tu sede</h3><p>Consulta con la clínica la dirección y el horario vigentes de la sede donde recibirás atención.</p></article><article class="info-card"><span class="tag">Tu cita</span><h3>Revisa los datos de tu reserva</h3><p>Ingresa al portal del paciente para consultar la fecha, la hora y el profesional asignado.</p><button type="button" onclick="openLoginModal()" class="btn-login-nav" style="margin-top:16px">Iniciar sesión</button></article></div>
     </section>
 
-    <!-- RF002: botón de emergencia siempre visible -->
-    <div style="position:fixed; right:18px; bottom:18px; z-index:150; display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
-        <a href="tel:160" style="background:#dc2626; color:#fff; padding:12px 18px; border-radius:999px; font-weight:700; font-size:14px; text-decoration:none; box-shadow:0 8px 20px rgba(220,38,38,.35);">
-            <i class="fas fa-ambulance"></i> Emergencia: llamar 160
-        </a>
-        <a href="#ubicacion" style="background:#fff; color:#dc2626; border:1px solid #fecaca; padding:8px 14px; border-radius:999px; font-weight:600; font-size:12px; text-decoration:none;">
-            <i class="fas fa-map-marker-alt"></i> Cómo llegar
-        </a>
-    </div>
-
-    <!-- FOOTER -->
-    <footer id="contacto">
+@endif
+    @if ($paginaPublica === 'contacto')
+    <section class="section" style="padding-top:145px;min-height:65vh;width:100%">
+        <h1 class="section-title">Contacto y orientación</h1>
+        <p class="section-subtitle">Encuentra orientación para tus consultas y gestiones.</p>
+        <div class="cards-grid">
+            <article class="info-card"><span class="tag">Atención</span><h3>Consultas y citas</h3><p>Ingresa a tu cuenta para consultar horarios, solicitar una cita y revisar el estado de tus reservas. Si necesitas actualizar tus datos, acude a recepción.</p></article>
+            <article class="info-card"><span class="tag">Resultados</span><h3>Tu información de salud</h3><p>En el portal del paciente puedes consultar recetas, resultados publicados y comprobantes disponibles para tu cuenta.</p></article>
+            <article class="info-card"><span class="tag">Ubicación</span><h3>Antes de tu visita</h3><p>Confirma con la clínica la dirección, los horarios y los medios de contacto vigentes antes de acudir.</p><p><a href="{{ route('login', ['seccion' => 'ubicacion']) }}">Ver información de ubicación →</a></p></article>
+        </div>
+    </section>
+    @endif
+    <footer>
         <div class="footer-content">
-            <div>
-                <h4>Clínica CIES - Sedes</h4>
-                <p>Sede Central: Av. Principal #123</p>
-                <p>Sucursal Norte: Av. Las Américas #45</p>
-                <p><a href="#ubicacion" style="color: var(--cies-green);">📍 Ver mapa y sucursales</a></p>
-            </div>
-            <div>
-                <h4>Horarios de Atención</h4>
-                <p>Lunes a Viernes: 07:30 - 20:00</p>
-                <p>Sábados: 08:00 - 14:00</p>
-                <p style="color: #f87171; font-weight: 600;">Emergencias: 24 Horas</p>
-            </div>
-            <div>
-                <h4>Teléfonos de Contacto</h4>
-                <p>Central: +591 (2) 244-0000</p>
-                <p>Urgencias: 160</p>
-                <p>Correo: contacto@cies.org.bo</p>
-            </div>
-            <div>
-                <h4>Aviso de Privacidad</h4>
-                <ul>
-                    <li><a href="#" onclick="openPrivacyModal(); return false;">Tratamiento de Datos de Salud Sensibles</a></li>
-                    <li><a href="#" onclick="openPrivacyModal(); return false;">Términos y Condiciones de Uso</a></li>
-                </ul>
-            </div>
+            <div><h4>Clínica CIES</h4><p>Información y servicios para tu atención integral.</p></div>
+            <div><h4>Explora</h4><p><a href="{{ route('login', ['seccion' => 'servicios']) }}">Servicios</a></p><p><a href="{{ route('login', ['seccion' => 'contacto']) }}">Contacto</a></p></div>
+            <div><h4>Privacidad</h4><p><a href="#" onclick="openPrivacyModal(); return false;">Aviso de privacidad y términos</a></p></div>
         </div>
-        <div class="footer-bottom">
-            &copy; {{ date('Y') }} Clínica CIES. Todos los derechos reservados.
-        </div>
+        <div class="footer-bottom">&copy; {{ date('Y') }} Clínica CIES.</div>
     </footer>
 
     <!-- MODAL DE INICIO DE SESIÓN -->

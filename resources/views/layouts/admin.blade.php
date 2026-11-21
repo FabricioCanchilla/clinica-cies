@@ -285,10 +285,11 @@
             @elseif (auth()->user()->COD_ROL === 'ROL002')
                 <a href="{{ route('recepcion.dashboard') }}" class="{{ request()->routeIs('recepcion.dashboard') ? 'activo' : '' }}"><i class="fas fa-house"></i> Recepción</a>
                 <div class="nav-titulo">Gestión</div>
-                <a href="{{ route('recepcion.dashboard') }}#citas"><i class="fas fa-calendar-check"></i> Citas y llegadas</a>
-                <a href="{{ route('recepcion.dashboard') }}#pacientes"><i class="fas fa-user-injured"></i> Pacientes</a>
-                <a href="{{ route('recepcion.dashboard') }}#disponibilidad"><i class="fas fa-clock"></i> Disponibilidad</a>
-                <a href="{{ route('recepcion.dashboard') }}#seguros"><i class="fas fa-shield"></i> Seguros</a>
+                <a href="{{ route('recepcion.dashboard', ['seccion' => 'citas']) }}"><i class="fas fa-calendar-check"></i> Citas y llegadas</a>
+                <a href="{{ route('recepcion.dashboard', ['seccion' => 'reservar']) }}"><i class="fas fa-calendar-plus"></i> Reservar cita</a>
+                <a href="{{ route('recepcion.dashboard', ['seccion' => 'pacientes']) }}"><i class="fas fa-user-injured"></i> Pacientes</a>
+                <a href="{{ route('recepcion.dashboard', ['seccion' => 'disponibilidad']) }}"><i class="fas fa-clock"></i> Disponibilidad</a>
+                <a href="{{ route('recepcion.dashboard', ['seccion' => 'seguros']) }}"><i class="fas fa-shield"></i> Seguros</a>
                 <a href="{{ route('notificaciones') }}"><i class="fas fa-bell"></i> Notificaciones</a>
             @elseif (auth()->user()->COD_ROL === 'ROL009')
                 <div class="nav-titulo">Control</div>
@@ -320,6 +321,11 @@
                 <a href="{{ route('caja.dashboard') }}" class="activo">
                     <i class="fas fa-cash-register"></i> Caja
                 </a>
+                <a href="{{ route('caja.dashboard', ['seccion'=>'citas']) }}"><i class="fas fa-calendar-check"></i> Cobrar citas</a>
+                <a href="{{ route('caja.dashboard', ['seccion'=>'examenes']) }}"><i class="fas fa-flask"></i> Cobrar exámenes</a>
+                <a href="{{ route('caja.dashboard', ['seccion'=>'medicamentos']) }}"><i class="fas fa-pills"></i> Cobrar medicamentos</a>
+                <a href="{{ route('caja.dashboard', ['seccion'=>'comprobantes']) }}"><i class="fas fa-receipt"></i> Comprobantes</a>
+                <a href="{{ route('caja.dashboard', ['seccion'=>'cierre']) }}"><i class="fas fa-file-invoice-dollar"></i> Cierre e historial</a>
             @endif
         </nav>
     </aside>

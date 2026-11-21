@@ -360,6 +360,28 @@ class FarmaciaService
         return DB::table('MEDICAMENTO')->orderBy('DES_MED')->get();
     }
 
+    public function crearMedicamento(string $nombre, string $precio, object $actor): string
+    {
+        return DB::transaction(function () use ($nombre, $precio, $actor) {
+            if ($nombre === '' || !$actor->COD_EMP) {
+                throw new DomainException('Indica un nombre válido y usa una cuenta de empleado.');
+            }
+            if (DB::table('MEDICAMENTO')->whereRaw('LOWER(TRIM(DES_MED)) = ?', [mb_strtolower($nombre)])->exists()) {
+                throw new DomainException('Ya existe un medicamento con ese nombre y presentación.');
+            }
+
+            do {
+                $codigo = sprintf('MED%05d', random_int(1, 99999));
+            } while (DB::table('MEDICAMENTO')->where('COD_MED', $codigo)->exists());
+
+            DB::table('MEDICAMENTO')->insert(['COD_MED' => $codigo, 'DES_MED' => $nombre]);
+            app(CobroMedicamentoService::class)->fijarPrecio($codigo, $precio, $actor->COD_EMP);
+            Auditoria::registrar('Crear medicamento', 'Media', self::DOM_INVENTARIO, 'MEDICAMENTO', $codigo, "Medicamento registrado: {$nombre}", $actor);
+
+            return $codigo;
+        });
+    }
+
     /** Entrada de stock: cada entrada crea un lote nuevo (CANDIS = CANING). Sin paciente afectado. */
     public function registrarEntrada(string $codMed, string $nroLot, string $fecVen, int $cantidad, object $actor): string
     {

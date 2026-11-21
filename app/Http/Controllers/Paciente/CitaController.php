@@ -31,19 +31,19 @@ class CitaController extends Controller
             DB::table('CITA')->where('COD_CIT', $codCit)->update(['EST_CIT' => 'Cancelada', 'FECEXP_CIT' => null]);
             Auditoria::registrar('Cancelar reserva', 'Media', 'DOM04', 'CITA', $codCit, 'Reserva sin pago cancelada por el paciente', codPac: $paciente);
         });
-        return redirect()->route('paciente.dashboard')->with('ok', 'Tu reserva sin pago fue cancelada.');
+        return redirect()->route('paciente.dashboard', ['seccion' => 'citas'])->with('ok', 'Tu reserva sin pago fue cancelada.');
     }
 
     public function cancelarConfirmada(string $codCit, SaldoPacienteService $saldos): RedirectResponse
     {
         $monto = $saldos->cancelar($codCit, $this->codPac(), 'Solicitud del paciente');
-        return redirect()->route('paciente.dashboard')->with('ok', 'Cita cancelada. Anticipo conservado como saldo: Bs '.number_format($monto, 2));
+        return redirect()->route('paciente.dashboard', ['seccion' => 'citas'])->with('ok', 'Cita cancelada. Anticipo conservado como saldo: Bs '.number_format($monto, 2));
     }
 
     public function aplicarSaldo(string $codCit, SaldoPacienteService $saldos): RedirectResponse
     {
         $monto = $saldos->aplicar($codCit, $this->codPac());
-        return redirect()->route('paciente.dashboard')->with('ok', 'Cita confirmada con Bs '.number_format($monto, 2).' de tu saldo.');
+        return redirect()->route('paciente.dashboard', ['seccion' => 'citas'])->with('ok', 'Cita confirmada con Bs '.number_format($monto, 2).' de tu saldo.');
     }
 
     public function reprogramar(Request $request, string $codCit): RedirectResponse
@@ -66,7 +66,7 @@ class CitaController extends Controller
             DB::table('MEDICO_ATENCION')->where('COD_CIT', $codCit)->delete();
             Auditoria::registrar('Reprogramar cita', 'Media', 'DOM04', 'CITA', $codCit, "Paciente cambió {$cita->FEC_CIT} {$cita->HOR_CIT} a {$datos['fecha']} {$datos['hora']}; conserva sus pagos", codPac: $paciente);
         });
-        return redirect()->route('paciente.dashboard')->with('ok', 'Tu cita fue reprogramada. Tus pagos permanecen asociados.');
+        return redirect()->route('paciente.dashboard', ['seccion' => 'citas'])->with('ok', 'Tu cita fue reprogramada. Tus pagos permanecen asociados.');
     }
 
     /** RF007: formulario de agendamiento (catálogos reales desde CitaService). */
@@ -145,7 +145,7 @@ class CitaController extends Controller
         try {
             $cita = $this->citas->citaParaPago($codCit, $this->codPac());
         } catch (DomainException $e) {
-            return redirect()->route('paciente.dashboard')->withErrors(['cita' => $e->getMessage()]);
+            return redirect()->route('paciente.dashboard', ['seccion' => 'citas'])->withErrors(['cita' => $e->getMessage()]);
         }
 
         return view('paciente.citas.pagar', [
@@ -208,11 +208,11 @@ class CitaController extends Controller
         $ok = "Cita confirmada. Anticipo de Bs {$pago->monto} registrado (pago {$pago->COD_PAG}).";
 
         if ($pago->NRO_COM) {
-            return redirect()->route('paciente.dashboard')
+            return redirect()->route('paciente.dashboard', ['seccion' => 'citas'])
                 ->with('ok', "{$ok} Tu comprobante es el {$pago->NRO_COM}.");
         }
 
-        return redirect()->route('paciente.dashboard')
+        return redirect()->route('paciente.dashboard', ['seccion' => 'citas'])
             ->with('ok', $ok)
             ->with('aviso', 'No pudimos generar tu comprobante en este momento. Tu pago y tu cita están confirmados; usa "Reintentar comprobante" en la lista de citas.');
     }

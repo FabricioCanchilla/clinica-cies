@@ -87,7 +87,7 @@ class RecepcionController extends Controller
             DB::table('PACIENTE')->insert(['COD_PAC' => $codigo, 'CI_PAC' => $d['ci'], 'NOM_PAC' => trim($d['nombres']), 'APE_PAC' => trim($d['apellidos']), 'SEX_PAC' => $d['sexo'], 'FECNAC_PAC' => $d['nacimiento'], 'ESTCIV_PAC' => $d['estado_civil'], 'TEL_PAC' => $d['telefono'], 'COR_PAC' => mb_strtolower(trim($d['correo'])), 'DIR_PAC' => trim($d['direccion'])]);
             Auditoria::registrar('Registrar paciente', 'Media', 'DOM01', 'PACIENTE', $codigo, 'Ficha creada en recepción', codPac: $codigo);
         });
-        return redirect()->route('recepcion.dashboard', ['buscar' => $d['ci']])->with('ok', 'Ficha registrada. Envía el enlace de activación al correo del paciente desde la lista.');
+        return redirect()->route('recepcion.dashboard', ['seccion' => 'pacientes', 'buscar' => $d['ci']])->with('ok', 'Ficha registrada. Envía el enlace de activación al correo del paciente desde la lista.');
     }
 
     public function reservar(Request $request, AgendaRecepcionService $agenda): RedirectResponse

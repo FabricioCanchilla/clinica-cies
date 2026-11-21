@@ -1,11 +1,25 @@
 @extends('layouts.admin')
 @section('titulo','Caja')
 @section('contenido')
+@php
+    $seccion = request('seccion', 'cajas');
+    if (!in_array($seccion, ['cajas','pagos','examenes','medicamentos'], true)) { $seccion = 'cajas'; }
+@endphp
+<div class="barra">@foreach(['cajas'=>'Cajas','pagos'=>'Pagos','examenes'=>'Exámenes','medicamentos'=>'Medicamentos'] as $clave=>$nombre)<a class="btn {{ $seccion === $clave ? 'principal' : '' }}" href="{{ route('admin.caja', ['seccion'=>$clave]) }}">{{ $nombre }}</a>@endforeach</div>
+
 <h1>Supervisión de caja</h1><p class="sub">Consulta aperturas, cierres y pagos registrados. Los cobros y cierres se realizan desde la cuenta del cajero.</p>
-<form class="barra" method="get"><label>Desde <input type="date" name="desde" value="{{ request('desde') }}"></label><label>Hasta <input type="date" name="hasta" value="{{ request('hasta') }}"></label><button class="btn principal">Filtrar</button></form>
+<form class="barra" method="get"><input type="hidden" name="seccion" value="{{ $seccion }}"><label>Desde <input type="date" name="desde" value="{{ request('desde') }}"></label><label>Hasta <input type="date" name="hasta" value="{{ request('hasta') }}"></label><button class="btn principal">Filtrar</button></form>
 @if($errors->any())<div class="card">{{ $errors->first() }}</div>@endif
+@if ($seccion === 'cajas')
 <div class="card" style="overflow-x:auto"><h2>Cajas</h2><table><thead><tr><th>Caja</th><th>Responsable</th><th>Apertura</th><th>Cobros confirmados</th><th>Cierre</th><th>Estado</th></tr></thead><tbody>@forelse($cajas as $c)<tr><td>{{ $c->COD_CAJ }}</td><td>{{ $c->NOM_EMP }} {{ $c->APE_EMP }}</td><td>{{ $c->FECAPE_CAJ }}<br>Bs {{ number_format($c->MONAPE_CAJ,2) }}</td><td>Bs {{ number_format($c->COBRADO,2) }}</td><td>{{ $c->FECCIE_CAJ ?? '—' }}<br>{{ $c->MONCIE_CAJ !== null ? 'Bs '.number_format($c->MONCIE_CAJ,2) : '' }}</td><td>{{ $c->EST_CAJ }}</td></tr>@empty<tr><td colspan="6">No hay cajas en el período.</td></tr>@endforelse</tbody></table>{{ $cajas->links() }}</div>
+@endif
+@if ($seccion === 'pagos')
 <div class="card" style="overflow-x:auto;margin-top:20px"><h2>Últimos pagos</h2><table><thead><tr><th>Fecha</th><th>Paciente</th><th>Cita</th><th>Método</th><th>Monto</th><th>Estado</th><th>Caja</th></tr></thead><tbody>@forelse($pagos as $p)<tr><td>{{ $p->FEC_PAG }}</td><td>{{ $p->NOM_PAC }} {{ $p->APE_PAC }}</td><td>{{ $p->COD_CIT }}</td><td>{{ $p->DES_MET }}</td><td>Bs {{ number_format($p->MON_PAG,2) }}</td><td>{{ $p->EST_PAG }}</td><td>{{ $p->COD_CAJ ?? 'En línea' }}</td></tr>@empty<tr><td colspan="7">No hay pagos registrados.</td></tr>@endforelse</tbody></table></div>
+@endif
+@if ($seccion === 'examenes')
 <div class="card" style="overflow-x:auto;margin-top:20px"><h2>Últimos cobros de exámenes</h2><table><tr><th>Cobro</th><th>Paciente</th><th>Examen</th><th>Monto</th><th>Estado</th></tr>@forelse($examenes as $x)<tr><td>{{ $x->COD_CEX }} · {{ $x->FECHA }}</td><td>{{ $x->NOM_PAC }} {{ $x->APE_PAC }}</td><td>{{ $x->NOM_SRV }}</td><td>Bs {{ number_format($x->MONTO,2) }}</td><td>{{ $x->ESTADO }}</td></tr>@empty<tr><td colspan="5">Sin cobros.</td></tr>@endforelse</table></div>
+@endif
+@if ($seccion === 'medicamentos')
 <div class="card" style="overflow-x:auto;margin-top:20px"><h2>Últimos cobros de medicamentos</h2><table><tr><th>Cobro</th><th>Paciente</th><th>Medicamento</th><th>Monto</th><th>Estado</th></tr>@forelse($medicamentos as $x)<tr><td>{{ $x->COD_CME }} · {{ $x->FECHA }}</td><td>{{ $x->NOM_PAC }} {{ $x->APE_PAC }}</td><td>{{ $x->DES_MED }} · {{ $x->CANTIDAD }} unidades</td><td>Bs {{ number_format($x->MONTO,2) }}</td><td>{{ $x->ESTADO }}</td></tr>@empty<tr><td colspan="5">Sin cobros.</td></tr>@endforelse</table></div>
+@endif
 @endsection

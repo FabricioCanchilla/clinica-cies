@@ -1,10 +1,22 @@
 @extends('layouts.admin')
 @section('titulo','Internación')
 @section('contenido')
+@php
+    $seccion = request('seccion', 'camas');
+    if (!in_array($seccion, ['camas','ingreso','internaciones'], true)) { $seccion = 'camas'; }
+@endphp
+<div class="barra">@foreach(['camas'=>'Camas','ingreso'=>'Registrar ingreso','internaciones'=>'Internaciones'] as $clave=>$nombre)<a class="btn {{ $seccion === $clave ? 'principal' : '' }}" href="{{ route('admin.internacion', ['seccion'=>$clave]) }}">{{ $nombre }}</a>@endforeach</div>
+
 <h1>Internación</h1><p class="sub">Consulta la ocupación y registra ingresos y cierres administrativos.</p>
 @if(session('ok'))<div class="card">{{ session('ok') }}</div>@endif
 @if($errors->any())<div class="card">{{ $errors->first() }}</div>@endif
+@if ($seccion === 'camas')
 <div class="card"><h2>Estado de camas</h2><div style="overflow-x:auto"><table><thead><tr><th>Sala</th><th>Ubicación</th><th>Cama</th><th>Estado</th><th>Acción</th></tr></thead><tbody>@forelse($camas as $c)<tr><td>{{ $c->NOM_SAL }}</td><td>{{ $c->UBI_SAL }}</td><td>{{ $c->NRO_CAM }} · {{ $c->COD_CAM }}</td><td>{{ $c->EST_CAM }}</td><td>@if($c->EST_CAM === 'Limpieza')<form method="post" action="{{ route('admin.internacion.cama',$c->COD_CAM) }}">@csrf<input type="hidden" name="estado" value="Disponible"><button class="btn">Limpieza completada</button></form>@endif</td></tr>@empty<tr><td colspan="5">No hay camas configuradas.</td></tr>@endforelse</tbody></table></div></div>
+@endif
+@if ($seccion === 'ingreso')
 <div class="card" style="margin-top:20px"><h2>Registrar ingreso</h2><form method="post" action="{{ route('admin.internacion.ingresar') }}">@csrf<div class="barra"><label>Paciente<select name="paciente" required><option value="">Seleccionar</option>@foreach($pacientes as $p)<option value="{{ $p->COD_PAC }}">{{ $p->APE_PAC }}, {{ $p->NOM_PAC }} · CI {{ $p->CI_PAC }}</option>@endforeach</select></label><label>Médico tratante<select name="medico" required><option value="">Seleccionar</option>@foreach($medicos as $m)<option value="{{ $m->COD_EMP }}">{{ $m->NOM_EMP }} {{ $m->APE_EMP }}</option>@endforeach</select></label><label>Cama disponible<select name="cama" required><option value="">Seleccionar</option>@foreach($camas->where('EST_CAM','Disponible') as $c)<option value="{{ $c->COD_CAM }}">{{ $c->NOM_SAL }} · cama {{ $c->NRO_CAM }}</option>@endforeach</select></label></div><label>Motivo <input name="motivo" required maxlength="200"></label><button class="btn principal">Registrar ingreso</button></form></div>
+@endif
+@if ($seccion === 'internaciones')
 <div class="card" style="margin-top:20px;overflow-x:auto"><h2>Internaciones</h2><table><thead><tr><th>Ingreso</th><th>Paciente</th><th>Médico</th><th>Sala / cama</th><th>Motivo</th><th>Estado</th><th>Acción</th></tr></thead><tbody>@forelse($internaciones as $i)<tr><td>{{ $i->FECING_INT }}<br>{{ $i->COD_INT }}</td><td>{{ $i->NOM_PAC }} {{ $i->APE_PAC }}<br>CI {{ $i->CI_PAC }}</td><td>{{ $i->NOM_EMP }} {{ $i->APE_EMP }}</td><td>{{ $i->NOM_SAL }} · {{ $i->NRO_CAM }}</td><td>{{ $i->MOT_INT }}</td><td>{{ $i->EST_INT }} @if($i->FECALT_INT)<br>{{ $i->FECALT_INT }}@endif</td><td>@if($i->EST_INT === 'Internado')<form method="post" action="{{ route('admin.internacion.alta',$i->COD_INT) }}" onsubmit="return confirm('¿Registrar el cierre administrativo de esta internación?')">@csrf<button class="btn">Registrar alta administrativa</button></form>@endif</td></tr>@empty<tr><td colspan="7">No hay internaciones.</td></tr>@endforelse</tbody></table>{{ $internaciones->links() }}</div>
+@endif
 @endsection

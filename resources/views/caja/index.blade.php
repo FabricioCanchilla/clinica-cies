@@ -7,6 +7,15 @@
 @endphp
 
 @section('contenido')
+    @php
+        $seccion = request('seccion', 'citas');
+        if (!in_array($seccion, ['citas','movimientos','examenes','medicamentos','comprobantes','cierre'], true)) { $seccion = 'citas'; }
+    @endphp
+    <div class="barra" aria-label="Secciones de caja">
+        @foreach (['citas'=>'Citas','movimientos'=>'Movimientos','examenes'=>'Exámenes','medicamentos'=>'Medicamentos','comprobantes'=>'Comprobantes','cierre'=>'Cierre e historial'] as $clave => $nombre)
+            <a class="btn {{ $seccion === $clave ? 'principal' : '' }}" href="{{ route('caja.dashboard', ['seccion'=>$clave]) }}">{{ $nombre }}</a>
+        @endforeach
+    </div>
     <h1>Caja</h1>
 
     @if (!$caja)
@@ -62,8 +71,9 @@
             </div>
         @endif
 
+@if ($seccion === 'citas')
         <h2>Citas con saldo por cobrar</h2>
-        <form method="GET" action="{{ route('caja.dashboard') }}" class="barra">
+        <form method="GET" action="{{ route('caja.dashboard') }}" class="barra"><input type="hidden" name="seccion" value="citas">
             <input type="text" name="buscar" value="{{ $buscar }}" placeholder="CI, nombre, apellido o código de cita">
             <button type="submit" class="btn">Buscar</button>
             @if ($buscar !== '')
@@ -92,18 +102,26 @@
             </table>
         </div>
 
+@endif
+@if ($seccion === 'movimientos')
         <h2>Movimientos de esta caja</h2>
         <div class="card" style="overflow-x:auto;margin-bottom:28px"><table><thead><tr><th>Fecha</th><th>Paciente</th><th>Cita / pago</th><th>Método</th><th>Descuento</th><th>Cobrado</th><th>Estado</th></tr></thead><tbody>
         @forelse($movimientos as $m)<tr><td>{{ $m->FEC_PAG }}</td><td>{{ $m->NOM_PAC }} {{ $m->APE_PAC }}</td><td>{{ $m->COD_CIT }}<br>{{ $m->COD_PAG }}</td><td>{{ $m->DES_MET }}</td><td>{{ $m->PORCENTAJE ?? 0 }} % ({{ $bs($m->DESCUENTO ?? 0) }})</td><td>{{ $bs($m->MON_PAG) }}</td><td>{{ $m->EST_PAG }}</td></tr>@empty<tr><td colspan="7">No hay movimientos en esta caja.</td></tr>@endforelse
         </tbody></table></div>
+@endif
+@if ($seccion === 'examenes')
         <h2>Cobro de exámenes</h2>
         <div class="card" style="overflow-x:auto;margin-bottom:24px"><table><thead><tr><th>Orden</th><th>Paciente</th><th>Examen</th><th>Tarifa</th><th>Cobrar</th></tr></thead><tbody>
         @forelse($examenes as $e)<tr><td>{{ $e->COD_ORD }}</td><td>{{ $e->NOM_PAC }} {{ $e->APE_PAC }} · CI {{ $e->CI_PAC }}</td><td>{{ $e->NOM_SRV }}</td><td>{{ $bs($e->PRE_SRV) }}</td><td><form method="post" action="{{ route('caja.examen.cobrar',$e->COD_ORD) }}">@csrf<input type="hidden" name="precio" value="{{ $e->PRE_SRV }}"><select name="metodo" required>@foreach($metodos as $m)<option value="{{ $m->COD_MET }}">{{ $m->DES_MET }}</option>@endforeach</select><button class="btn principal">Cobrar</button></form></td></tr>@empty<tr><td colspan="5">No hay exámenes pendientes para esta búsqueda.</td></tr>@endforelse
         </tbody></table></div>
         <div class="card" style="overflow-x:auto;margin-bottom:24px"><h2>Cobros de exámenes de esta caja</h2><table><tr><th>Cobro</th><th>Paciente y examen</th><th>Monto</th><th>Estado</th><th>Acciones</th></tr>@forelse($cobrosExamen as $e)<tr><td>{{ $e->COD_CEX }} · {{ $e->FECHA }}</td><td>{{ $e->NOM_PAC }} {{ $e->APE_PAC }} · {{ $e->NOM_SRV }}</td><td>{{ $bs($e->MONTO) }} · {{ $e->DES_MET }}</td><td>{{ $e->ESTADO }} {{ $e->MOTIVO }}</td><td><a class="btn" href="{{ route('caja.examen.pdf',$e->COD_CEX) }}">Comprobante PDF</a>@if($e->ESTADO === 'Confirmado' && \Carbon\Carbon::parse($e->FECHA)->isToday())<form method="post" action="{{ route('caja.examen.anular',$e->COD_CEX) }}">@csrf<input name="motivo" minlength="10" maxlength="200" placeholder="Motivo de anulación" required><button class="btn peligro">Anular</button></form>@endif</td></tr>@empty<tr><td colspan="5">Sin cobros de exámenes.</td></tr>@endforelse</table></div>
+@endif
+@if ($seccion === 'medicamentos')
         <h2>Cobro y entrega de medicamentos recetados</h2>
         <div class="card" style="overflow-x:auto;margin-bottom:24px"><table><tr><th>Receta y paciente</th><th>Medicamento</th><th>Precio unitario</th><th>Pendiente</th><th>Cobrar y entregar</th></tr>@forelse($medicamentos as $m)<tr><td>{{ $m->COD_REC }} · {{ $m->NOM_PAC }} {{ $m->APE_PAC }} · CI {{ $m->CI_PAC }}</td><td>{{ $m->DES_MED }}</td><td>{{ $m->PRECIO !== null ? $bs($m->PRECIO) : 'Sin precio' }}</td><td>{{ $m->CANTIDAD - $m->CANENT_DRE }}</td><td>@if($m->PRECIO)<form method="post" action="{{ route('caja.medicamento.cobrar') }}">@csrf<input type="hidden" name="receta" value="{{ $m->COD_REC }}"><input type="hidden" name="detalle" value="{{ $m->COD_DRE }}"><input type="hidden" name="token" value="{{ (string) \Illuminate\Support\Str::uuid() }}"><input type="hidden" name="precio" value="{{ $m->PRECIO }}"><input type="number" name="cantidad" min="1" max="{{ $m->CANTIDAD - $m->CANENT_DRE }}" value="1" required oninput="this.form.querySelector('output').textContent = 'Bs ' + (Number(this.value || 0) * Number(this.form.elements.precio.value)).toFixed(2)"><output>Bs {{ number_format($m->PRECIO,2) }}</output><select name="metodo">@foreach($metodos as $met)<option value="{{ $met->COD_MET }}">{{ $met->DES_MET }}</option>@endforeach</select><button class="btn principal">Cobrar y entregar</button></form>@else Solicita registrar el precio en farmacia. @endif</td></tr>@empty<tr><td colspan="5">No hay medicamentos con cantidades confirmadas pendientes.</td></tr>@endforelse</table></div>
         <div class="card" style="overflow-x:auto;margin-bottom:24px"><h2>Cobros de medicamentos de esta caja</h2><table><tr><th>Cobro</th><th>Paciente</th><th>Medicamento</th><th>Total</th><th></th></tr>@forelse($cobrosMedicamento as $m)<tr><td>{{ $m->COD_CME }} · {{ $m->FECHA }}</td><td>{{ $m->NOM_PAC }} {{ $m->APE_PAC }}</td><td>{{ $m->DES_MED }} · {{ $m->CANTIDAD }} unidades</td><td>{{ $bs($m->MONTO) }} · {{ $m->DES_MET }}</td><td><a class="btn" href="{{ route('caja.medicamento.pdf',$m->COD_CME) }}">Comprobante PDF</a> · {{ $m->ESTADO }} @if($m->ESTADO === 'Confirmado' && \Carbon\Carbon::parse($m->FECHA)->isToday())<form method="post" action="{{ route('caja.medicamento.anular',$m->COD_CME) }}">@csrf<input name="motivo" minlength="10" maxlength="200" required placeholder="Motivo de anulación"><label><input type="checkbox" name="devuelto" value="1" required> Confirmo que se devolvieron todas las unidades y están aptas para volver al inventario.</label><button class="btn peligro">Anular y devolver stock</button></form>@endif</td></tr>@empty<tr><td colspan="5">Sin cobros de medicamentos.</td></tr>@endforelse</table></div>
+@endif
+@if ($seccion === 'comprobantes')
         <h2>Comprobantes de esta caja</h2>
         <div class="card" style="overflow-x: auto; margin-bottom: 28px;">
             <table>
@@ -142,6 +160,8 @@
             </table>
         </div>
 
+@endif
+@if ($seccion === 'cierre')
         <h2>Cierre de caja</h2>
         <div class="card formulario">
             @if ($resumen['porMetodo']->isNotEmpty())
@@ -162,9 +182,12 @@
                 <button type="submit" class="btn peligro">Cerrar caja</button>
             </form>
         </div>
+@endif
     @endif
+@if ($seccion === 'cierre')
     <h2 style="margin-top:28px">Historial de cierres</h2>
     <div class="card" style="overflow-x:auto"><table><thead><tr><th>Caja</th><th>Apertura</th><th>Cierre</th><th>Cobrado</th><th>Efectivo esperado</th><th>Contado</th><th>Diferencia</th></tr></thead><tbody>
     @forelse($historial as $h)<tr><td>{{ $h->COD_CAJ }}</td><td>{{ $h->FECAPE_CAJ }}<br>{{ $bs($h->MONAPE_CAJ) }}</td><td>{{ $h->FECCIE_CAJ }}</td><td>{{ $bs($h->resumen['total']) }}</td><td>{{ $bs($h->resumen['esperado']) }}</td><td>{{ $bs($h->MONCIE_CAJ) }}</td><td>{{ $bs($h->diferencia) }}</td></tr>@empty<tr><td colspan="7">Aún no tienes cierres registrados.</td></tr>@endforelse
     </tbody></table></div>
+@endif
 @endsection

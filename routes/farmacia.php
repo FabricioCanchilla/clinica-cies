@@ -9,6 +9,7 @@ use App\Http\Controllers\Farmacia\LoteController as FarmLoteController;
         Route::post('/recetas/{codRec}/items/{codDre}/cantidad', [FarmRecetaController::class, 'cantidad'])->name('cantidad');
         Route::post('/recetas/{codRec}/items/{codDre}/despachar', [FarmRecetaController::class, 'despachar'])->name('despachar');
 
+        Route::post('/medicamentos', [FarmLoteController::class, 'crearMedicamento'])->name('medicamentos.crear');
         Route::get('/lotes', [FarmLoteController::class, 'index'])->name('lotes');
         Route::post('/precios/{medicamento}', [FarmLoteController::class, 'precio'])->name('precios.guardar');
         Route::post('/lotes', [FarmLoteController::class, 'entrada'])->name('lotes.entrada');
